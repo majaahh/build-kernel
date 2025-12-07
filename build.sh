@@ -72,6 +72,11 @@ make -j"$(nproc --all)" O="$OUTDIR" CC="clang" \
     INSTALL_MOD_STRIP="--strip-debug --keep-section=.ARM.attributes" \
     INSTALL_MOD_PATH="$MOD_OUTDIR" "modules_install" >/dev/null
 
+if [[ ! -f "$OUTDIR/arch/arm64/boot/Image" ]]; then
+    echo "Compilation failed"
+    exit 1
+fi
+
 if [[ -d "$TMP_DIR" ]]; then
     rm -rf "$TMP_DIR"
 fi
