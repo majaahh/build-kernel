@@ -34,7 +34,9 @@ OUT_VENDORBOOTIMG="$IMAGES_DIR/vendor_boot.img"
 OUT_DTBIMAGE="$IMAGES_DIR/dtb.img"
 MKBOOTIMG="$(pwd)/build/mkbootimg/mkbootimg.py"
 MKDTBOIMG="$(pwd)/build/dtb/mkdtboimg.py"
-AOSP_DIR="$PREV_DIR/aospclang-20"
+AOSP_LIST="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source"
+AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
+AOSP_DIR="$PREV_DIR/aospclang"
 DATE="$(date +%Y%m%d-%H%M)"
 MONTH="$(date +%Y-%m)"
 TAR="$DIR/build/UN1CA-kernel_a53x-$DATE.tar"
@@ -62,7 +64,24 @@ mkdir -p "$MOD_OUTDIR"
 if [[ ! -d "$AOSP_DIR" ]]; then
     mkdir -p "$AOSP_DIR"
 
-    git clone --depth=1 -j"$(nproc --all)" "https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r547379.git" "$AOSP_DIR"
+    HTML="$(curl -s "$AOSP_LIST")"
+    CURRENT_CLANG="$(printf '%s\n' "$HTML" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
+
+    if [[ -z "$CURRENT_CLANG" ]]; then
+        echo "Couldn’t find any clang-r### dirs in $AOSP_LIST" >&2
+        exit 1
+    fi
+
+    echo "Latest AOSP Clang is $CURRENT_CLANG, downloading."
+    if ! wget -nv --show-progress -O "$CURRENT_CLANG.tar.gz" "$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz"; then
+        echo "Download failed"
+        exit 1
+    fi
+
+    tar -xf "$CURRENT_CLANG.tar.gz" -C "$AOSP_DIR" && rm "$CURRENT_CLANG.tar.gz"
+
+    touch "$AOSP_DIR/bin/aarch64-linux-gnu-elfedit" && chmod +x "$AOSP_DIR/bin/aarch64-linux-gnu-elfedit"
+    touch "$AOSP_DIR/bin/arm-linux-gnueabi-elfedit" && chmod +x "$AOSP_DIR/bin/arm-linux-gnueabi-elfedit"
 fi
 
 make -j"$(nproc --all)" O="$OUTDIR" CC="clang" "a53x_defconfig" >/dev/null
