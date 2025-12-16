@@ -73,7 +73,7 @@ if [[ ! -d "$AOSP_DIR" ]]; then
     fi
 
     echo "Latest AOSP Clang is $CURRENT_CLANG, downloading."
-    if ! wget -nv --show-progress -O "$CURRENT_CLANG.tar.gz" "$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz"; then
+    if ! wget -nvq -O "$CURRENT_CLANG.tar.gz" "$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz"; then
         echo "Download failed"
         exit 1
     fi
