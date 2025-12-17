@@ -69,6 +69,7 @@ IMAGES_DIR="$SRC_DIR/build/images"
 OUT_BOOTIMG="$IMAGES_DIR/boot.img"
 OUT_VENDORBOOTIMG="$IMAGES_DIR/vendor_boot.img"
 OUT_DTBIMAGE="$IMAGES_DIR/dtb.img"
+OUT_DTBOIMAGE="$IMAGES_DIR/dtbo.img"
 MKBOOTIMG="$(pwd)/build/mkbootimg/mkbootimg.py"
 MKDTBOIMG="$(pwd)/build/dtb/mkdtboimg.py"
 AOSP_LIST="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source"
@@ -149,6 +150,9 @@ LOG_STEP_IN true "Building TAR archive"
 LOG "- Building dtb image"
 EVAL "\"$MKDTBOIMG\" cfg_create \"$OUT_DTBIMAGE\" \"$SRC_DIR/build/configs/s5e8825.cfg\" -d \"$DTS_DIR\""
 
+LOG "- Building dtbo image"
+EVAL "\"$MKDTBOIMG\" cfg_create \"$OUT_DTBOIMAGE\" \"$SRC_DIR/build/configs/a53x.cfg\" -d \"$DTS_DIR/samsung/a53x\""
+
 LOG "- Building boot image"
 EVAL "\"$MKBOOTIMG\" \
     --header_version 4 \
@@ -194,9 +198,10 @@ fi
 cd "$SRC_DIR/build"
 
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_BOOTIMG\" > "boot.img.lz4""
+EVAL "lz4 -c -12 -B6 --content-size \"$OUT_DTBOIMAGE\" > \"dtbo.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_VENDORBOOTIMG\" > \"vendor_boot.img.lz4\""
-EVAL "tar -cf \"$BUILDS_DIR/$TAR\" \"boot.img.lz4\" \"vendor_boot.img.lz4\""
-EVAL "rm -f \"boot.img.lz4\" \"vendor_boot.img.lz4\""
+EVAL "tar -cf \"$BUILDS_DIR/$TAR\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
+EVAL "rm -f \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 )
 LOG_STEP_OUT
 

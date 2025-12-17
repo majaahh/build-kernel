@@ -50,6 +50,11 @@ CLEANUP()
         rm -f "$OUT_BOOTIMG"
     fi
 
+    if [[ -f "$OUT_DTBOIMAGE" ]] && [[ "$POST" != "true" ]]; then
+        LOG "- Deleting boot image"
+        rm -f "$OUT_DTBOIMAGE"
+    fi
+
     if [[ -f "$OUT_VENDORBOOTIMG" ]] && [[ "$POST" != "true" ]]; then
         LOG "- Deleting vendot boot image"
         rm -f "$OUT_VENDORBOOTIMG"
