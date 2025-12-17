@@ -38,6 +38,14 @@ GENERATE_MODULES_LOAD()
         exit 1
     fi
 
+    if [[ ! -d "$TMP_DIR" ]]; then
+        EVAL "mkdir -p \"$TMP_DIR\""
+    fi
+
+    if [[ ! -d "$MODULES_DIR/0.0" ]]; then
+        EVAL "mkdir -p \"$MODULES_DIR/0.0\""
+    fi
+
     depmod -b "$DEPMOD_BASE" "$KERNEL_VERSION" 2>/dev/null || {
         LOGW "Depmod failed, will use modules.order without dependency resolution"
     }
@@ -46,11 +54,11 @@ GENERATE_MODULES_LOAD()
         basename "$line"
     done < "$MODULES_ORDER" > "$ALL_MODULES"
 
-    while IFS= read -r module; do
-        echo "$module" >> "$TEMP_MODULES"
+    while IFS= read -r m; do
+        EVAL "echo \"$m\" >> \"$TEMP_MODULES\""
     done < "$ALL_MODULES"
 
-    mv -f "$TEMP_MODULES" "$ALL_MODULES"
+    EVAL "mv -f \"$TEMP_MODULES\" \"$ALL_MODULES\""
 
     if [[ -f "$MODULES_DEP" ]]; then
         SORTED_MODULES=$(mktemp)
@@ -72,7 +80,7 @@ GENERATE_MODULES_LOAD()
             done
 
             PROCESSED[$MODNAME]=1
-            echo "$MODNAME" >> "$SORTED_MODULES"
+            EVAL "echo \"$MODNAME\" >> \"$SORTED_MODULES\""
         }
 
         while IFS= read -r module; do
@@ -83,20 +91,20 @@ GENERATE_MODULES_LOAD()
 
         for m in "${PRIORITY_MODULES[@]}"; do
             if grep -q "^$m$" "$SORTED_MODULES"; then
-                echo "$m" >> "$OUTPUT_FILE"
-                sed -i "/^$m$/d" "$SORTED_MODULES"
+                EVAL "echo \"$m\" >> \"$OUTPUT_FILE\""
+                EVAL "sed -i \"/^$m$/d\" \"$SORTED_MODULES\""
             fi
         done
 
-        cat "$SORTED_MODULES" >> "$OUTPUT_FILE"
-        rm -f "$SORTED_MODULES"
+        EVAL "cat \"$SORTED_MODULES\" >> \"$OUTPUT_FILE\""
+        EVAL "rm -f \"$SORTED_MODULES\""
     else
         : > "$OUTPUT_FILE"
 
-        cat "$ALL_MODULES" >> "$OUTPUT_FILE"
+        EVAL "cat \"$ALL_MODULES\" >> \"$OUTPUT_FILE\""
     fi
 
-    rm -f "$ALL_MODULES"
+    EVAL "rm -f \"$ALL_MODULES\""
 
     if [[ ! -f "$OUTPUT_FILE" ]]; then
         LOGE "ERROR: Failed to generate modules.load"
@@ -109,27 +117,23 @@ GENERATE_MODULES_LOAD()
         MODULE_MAP["$NAME"]="$path"
     done < <(find "$MOD_OUTDIR/lib/modules" -name "*.ko" -type f)
 
-    for m in $(cat "$TMP_DIR/modules.load"); do
+    for m in $(cat "$OUTPUT_FILE"); do
         SRC="${MODULE_MAP[$m]}"
         if [[ -n "$SRC" ]] && [[ -f "$SRC" ]]; then
-            cp -f "$SRC" "$MODULES_DIR/0.0/$m"
+            EVAL "cp -f \"$SRC\" \"$MODULES_DIR/0.0/$m\""
         fi
     done
 
     EVAL "depmod 0.0 -b \"$DLKM_RAMDISK_DIR\""
     EVAL "sed -i \"s/\([^ ]\+\)/\/lib\/modules\/\1/g\" \"$MODULES_DIR/0.0/modules.dep\""
 
-    (
-    cd "$MODULES_DIR/0.0"
-
-    for i in $(find . -name "modules.*" -type f); do
-        if [[ "$(basename "$i")" != "modules.dep" && "$(basename "$i")" != "modules.softdep" && "$(basename "$i")" != "modules.alias" ]]; then
+    for i in $(find "$MODULES_DIR/0.0" -name "modules.*" -type f); do
+        if [[ "$(basename "$i")" != "modules.alias" ]] && [[ "$(basename "$i")" != "modules.dep" ]] && [[ "$(basename "$i")" != "modules.softdep" ]]; then
             EVAL "rm -f \"$i\""
         fi
     done
-    )
 
-    EVAL "cp -f \"$TMP_DIR/modules.load\" \"$MODULES_DIR/0.0/modules.load\""
+    EVAL "cp -f \"$OUTPUT_FILE\" \"$MODULES_DIR/0.0/modules.load\""
     EVAL "mv -f \"$MODULES_DIR/0.0/\"* \"$MODULES_DIR/\""
     EVAL "rm -rf \"$MODULES_DIR/0.0\""
 }

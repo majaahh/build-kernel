@@ -90,9 +90,7 @@ export LLVM_IAS=1
 export ARCH=arm64
 export PATH="$AOSP_DIR/bin:$PATH"
 
-LOG_STEP_IN true "Cleaning up build remainings"
 CLEANUP
-LOG_STEP_OUT
 
 if [[ ! -d "$AOSP_DIR" ]]; then
     LOG_STEP_IN true "Downloading clang"
@@ -111,8 +109,8 @@ if [[ ! -d "$AOSP_DIR" ]]; then
 
     EVAL "tar -xf \"$CURRENT_CLANG.tar.gz\" -C \"$AOSP_DIR\" && rm \"$CURRENT_CLANG.tar.gz\""
 
-    touch "$AOSP_DIR/bin/aarch64-linux-gnu-elfedit" && chmod +x "$AOSP_DIR/bin/aarch64-linux-gnu-elfedit"
-    touch "$AOSP_DIR/bin/arm-linux-gnueabi-elfedit" && chmod +x "$AOSP_DIR/bin/arm-linux-gnueabi-elfedit"
+    EVAL "touch \"$AOSP_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$AOSP_DIR/bin/aarch64-linux-gnu-elfedit\""
+    EVAL "touch \"$AOSP_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$AOSP_DIR/bin/arm-linux-gnueabi-elfedit\""
 
     LOG_STEP_OUT
 fi
@@ -132,6 +130,7 @@ EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \
     INSTALL_MOD_STRIP=\"--strip-debug --keep-section=.ARM.attributes\" \
     INSTALL_MOD_PATH=\"$MOD_OUTDIR\" \"modules_install\" >/dev/null"
 
+EVAL "mkdir -p \"$PLATFORM_RAMDISK_DIR/first_stage_ramdisk\""
 EVAL "cp -rf \"$IN_PLATFORM/\"* \"$PLATFORM_RAMDISK_DIR\""
 EVAL "cp -f \"$PLATFORM_RAMDISK_DIR/fstab.s5e8825\" \"$PLATFORM_RAMDISK_DIR/first_stage_ramdisk/fstab.s5e8825\""
 
@@ -146,6 +145,9 @@ LOG_STEP_OUT
 LOG_STEP_OUT
 
 LOG_STEP_IN true "Building TAR archive"
+if [[ ! -d "$IMAGES_DIR" ]]; then
+    EVAL "mkdir -p \"$IMAGES_DIR\""
+fi
 
 LOG "- Building dtb image"
 EVAL "\"$MKDTBOIMG\" cfg_create \"$OUT_DTBIMAGE\" \"$SRC_DIR/build/configs/s5e8825.cfg\" -d \"$DTS_DIR\""
@@ -163,18 +165,16 @@ EVAL "\"$MKBOOTIMG\" \
     --os_patch_level \"$MONTH\""
 
 (
-cd "$DLKM_RAMDISK_DIR"
-
-find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > "../ramdisk_dlkm.lz4"
+cd "$DLKM_RAMDISK_DIR" || exit 1
+EVAL "find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"../ramdisk_dlkm.lz4\""
 )
 
 (
-cd "$TMP_DIR/ramdisk_platform"
-
-find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > "../ramdisk_platform.lz4"
+cd "$PLATFORM_RAMDISK_DIR" || exit 1
+EVAL "find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"../ramdisk_platform.lz4\""
 )
 
-echo "buildtime_bootconfig=enable" > "$TMP_DIR/bootconfig"
+EVAL "echo \"buildtime_bootconfig=enable\" > \"$TMP_DIR/bootconfig\""
 
 LOG "- Building vendor_boot image"
 EVAL "\"$MKBOOTIMG\" \
@@ -197,7 +197,7 @@ fi
 (
 cd "$SRC_DIR/build"
 
-EVAL "lz4 -c -12 -B6 --content-size \"$OUT_BOOTIMG\" > "boot.img.lz4""
+EVAL "lz4 -c -12 -B6 --content-size \"$OUT_BOOTIMG\" > \"boot.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_DTBOIMAGE\" > \"dtbo.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_VENDORBOOTIMG\" > \"vendor_boot.img.lz4\""
 EVAL "tar -cf \"$BUILDS_DIR/$TAR\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
@@ -205,6 +205,4 @@ EVAL "rm -f \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 )
 LOG_STEP_OUT
 
-LOG_STEP_IN true "Cleaning up build remainings"
-CLEANUP true
-LOG_STEP_OUT
+CLEANUP

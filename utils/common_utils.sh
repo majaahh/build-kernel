@@ -3,71 +3,34 @@ source "$SRC_DIR/build/utils/log_utils.sh" || return 1
 
 CLEANUP()
 {
-    local POST="$1"
+    local DIRTY
+    local DIRS=("$IMAGES_DIR" "$MOD_OUTDIR" "$TMP_DIR")
+    local FILES=("$OUT_KERNEL")
 
-    if [[ -d "$IMAGES_DIR" ]]; then
-        LOG "- Deleting images dir"
-        rm -rf "$IMAGES_DIR"
-    fi
-    if [[ "$POST" != "true" ]]; then
-        mkdir -p "$IMAGES_DIR"
-    fi
+    for i in "${DIRS[@]}"; do
+        if [[ -d "$i" ]] && [[ "$DIRTY" != "true" ]]; then
+            LOG_STEP_IN true "Cleaning up build remainings"
+            DIRTY="true"
+        fi
+        if [[ -d "$i" ]]; then
+            LOG "- Deleting "${i//$SRC_DIR\//}""
+            EVAL "rm -rf \"$i\""
+        fi
+    done
 
-    if [[ -d "$MOD_OUTDIR" ]]; then
-        LOG "- Deleting modules dir"
-        rm -rf "$MOD_OUTDIR"
-    fi
-    if [[ "$POST" != "true" ]]; then
-        mkdir -p "$MOD_OUTDIR"
-    fi
+    for i in ${FILES[@]}; do
+        if [[ -f "$i" ]] && [[ "$DIRTY" != "true" ]]; then
+            LOG_STEP_IN true "Cleaning up build remainings"
+            DIRTY="true"
+        fi
+        if [[ -f "$i" ]]; then
+            LOG "- Deleting "${i//$SRC_DIR\//}""
+            EVAL "rm -f \"$i\""
+        fi
+    done
 
-    if [[ -d "$TMP_DIR" ]]; then
-        LOG "- Deleting temp dir"
-        rm -rf "$TMP_DIR"
-    fi
-    if [[ "$POST" != "true" ]]; then
-        mkdir -p "$TMP_DIR"
-    fi
-
-    if [[ -d "$PLATFORM_RAMDISK_DIR" ]]; then
-        LOG "- Deleting platform ramdisk dir"
-        rm -rf "$PLATFORM_RAMDISK_DIR"
-    fi
-    if [[ "$POST" != "true" ]]; then
-        mkdir -p "$PLATFORM_RAMDISK_DIR/first_stage_ramdisk"
-    fi
-
-    if [[ -d "$MODULES_DIR/0.0" ]]; then
-        LOG "- Deleting modules/0.0 dir"
-        rm -rf "$MODULES_DIR/0.0"
-    fi
-    if [[ "$POST" != "true" ]]; then
-        mkdir -p "$MODULES_DIR/0.0"
-    fi
-
-    if [[ -f "$OUT_BOOTIMG" ]] && [[ "$POST" != "true" ]]; then
-        LOG "- Deleting boot image"
-        rm -f "$OUT_BOOTIMG"
-    fi
-
-    if [[ -f "$OUT_DTBOIMAGE" ]] && [[ "$POST" != "true" ]]; then
-        LOG "- Deleting boot image"
-        rm -f "$OUT_DTBOIMAGE"
-    fi
-
-    if [[ -f "$OUT_VENDORBOOTIMG" ]] && [[ "$POST" != "true" ]]; then
-        LOG "- Deleting vendot boot image"
-        rm -f "$OUT_VENDORBOOTIMG"
-    fi
-
-    if [[ -f "$OUT_KERNEL" ]]; then
-        LOG "- Deleting kernel"
-        rm -f "$OUT_KERNEL"
-    fi
-
-    if [[ -f "$BUILDS_DIR/$TAR" ]] && [[ "$POST" != "true" ]]; then
-        LOG "- Deleting TAR"
-        rm -f "$BUILDS_DIR/$TAR"
+    if [[ "$DIRTY" == "true" ]]; then
+        LOG_STEP_OUT
     fi
 }
 
