@@ -59,7 +59,7 @@ MOD_OUTDIR="$SRC_DIR/modules_out"
 TMP_DIR="$SRC_DIR/build/tmp"
 IN_PLATFORM="$SRC_DIR/build/vboot_platform"
 IN_DLKM="$SRC_DIR/build/vboot_dlkm"
-IN_DTB="$OUTDIR/arch/arm64/boot/dts/exynos/s5e8825.dtb"
+DTS_DIR="$OUTDIR/arch/arm64/boot/dts/exynos"
 PLATFORM_RAMDISK_DIR="$TMP_DIR/ramdisk_platform"
 DLKM_RAMDISK_DIR="$TMP_DIR/ramdisk_dlkm"
 PREBUILT_RAMDISK="$SRC_DIR/build/boot/ramdisk"
@@ -147,13 +147,7 @@ LOG_STEP_OUT
 LOG_STEP_IN true "Building TAR archive"
 
 LOG "- Building dtb image"
-EVAL "\"$MKDTBOIMG\" create \
-    \"$OUT_DTBIMAGE\" \
-    --custom0=0x00000000 \
-    --custom1=0xff000000 \
-    --version=0 \
-    --page_size=2048 \
-    \"$IN_DTB\""
+EVAL "\"$MKDTBOIMG\" cfg_create \"$OUT_DTBIMAGE\" \"$SRC_DIR/build/configs/s5e8825.cfg\" -d \"$DTS_DIR\""
 
 LOG "- Building boot image"
 EVAL "\"$MKBOOTIMG\" \
