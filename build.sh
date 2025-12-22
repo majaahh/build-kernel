@@ -39,6 +39,11 @@ _GET_SRC_DIR()
     fi
 }
 
+_PRINT_USAGE()
+{
+    echo "Usage: ./build/build.sh [-r]"
+}
+
 SRC_DIR="$(_GET_SRC_DIR)"
 if [ ! "$SRC_DIR" ]; then
     echo "Couldn't locate the top of the tree. Always source buildenv.sh from the root of the tree." >&2
@@ -79,6 +84,7 @@ DATE="$(date +%Y%m%d-%H%M)"
 MONTH="$(date +%Y-%m)"
 BUILDS_DIR="$SRC_DIR/build/builds"
 TAR="UN1CA_Kernel-$DATE-a53x.tar"
+REGENERATE=""
 
 export KBUILD_BUILD_USER="Majaahh"
 export KBUILD_BUILD_HOST="PC"
@@ -89,6 +95,21 @@ export LLVM=1
 export LLVM_IAS=1
 export ARCH=arm64
 export PATH="$AOSP_DIR/bin:$PATH"
+
+while [[ "$1" == "-"* ]]; do
+    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+        _PRINT_USAGE
+        exit 1
+    elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
+        REGENERATE="true"
+    else
+        LOGE "Unknown option: $1"
+        _PRINT_USAGE
+        exit 1
+    fi
+
+    shift
+done
 
 CLEANUP
 
@@ -118,6 +139,14 @@ fi
 LOG_STEP_IN true "Starting build"
 LOG_STEP_IN "- Generating configuration"
 EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \"a53x_defconfig\" >/dev/null"
+
+if [[ "$REGENERATE" == "true" ]]; then
+    LOG "- Copying configuration to arch/arm64/configs/a53x_defconfig"
+    EVAL "cp -a \"$OUTDIR/.config\" \"$SRC_DIR/arch/arm64/configs/a53x_defconfig\""
+    LOG_STEP_OUT
+    exit 0
+fi
+
 LOG "- Setting local version"
 EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git rev-parse --short HEAD)/g \"$OUTDIR/.config\""
 LOG_STEP_OUT
