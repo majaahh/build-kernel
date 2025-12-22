@@ -41,7 +41,11 @@ _GET_SRC_DIR()
 
 _PRINT_USAGE()
 {
-    echo "Usage: ./build/build.sh [-r]"
+    echo "Usage: ./build/build.sh [arguments]"
+    echo "Arguments:"
+    echo "-h,--help        Prints this help menu"
+    echo "-r,--regenerate  Regenerates the defconfig"
+    echo "-k,--ksu         Makes a KernelSU Build"
 }
 
 SRC_DIR="$(_GET_SRC_DIR)"
@@ -55,9 +59,7 @@ unset -f _GET_SRC_DIR
 source "$SRC_DIR/build/utils/common_utils.sh" || exit 1
 source "$SRC_DIR/build/utils/log_utils.sh" || exit 1
 source "$SRC_DIR/build/utils/module_utils.sh" || exit 1
-# ]
 
-# Variables
 PREV_DIR="$(readlink -f ../)"
 OUTDIR="$SRC_DIR/out"
 MOD_OUTDIR="$SRC_DIR/modules_out"
@@ -83,8 +85,10 @@ AOSP_DIR="$PREV_DIR/aospclang"
 DATE="$(date +%Y%m%d-%H%M)"
 MONTH="$(date +%Y-%m)"
 BUILDS_DIR="$SRC_DIR/build/builds"
-TAR="UN1CA_Kernel-$DATE-a53x.tar"
 REGENERATE=""
+KSU=""
+KSU_TAR_EXTENSION=""
+# ]
 
 export KBUILD_BUILD_USER="Majaahh"
 export KBUILD_BUILD_HOST="PC"
@@ -100,6 +104,9 @@ while [[ "$1" == "-"* ]]; do
     if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 1
+    elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
+        KSU="true"
+        KSU_TAR_EXTENSION="-KernelSU"
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         REGENERATE="true"
     else
@@ -145,6 +152,11 @@ if [[ "$REGENERATE" == "true" ]]; then
     EVAL "cp -a \"$OUTDIR/.config\" \"$SRC_DIR/arch/arm64/configs/a53x_defconfig\""
     LOG_STEP_OUT
     exit 0
+fi
+
+if [[ "$KSU" == "true" ]]; then
+    LOG "- Merging KernelSU fragment"
+    EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \"ksu.config\" >/dev/null"
 fi
 
 LOG "- Setting local version"
@@ -229,7 +241,7 @@ cd "$SRC_DIR/build"
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_BOOTIMG\" > \"boot.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_DTBOIMAGE\" > \"dtbo.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_VENDORBOOTIMG\" > \"vendor_boot.img.lz4\""
-EVAL "tar -cf \"$BUILDS_DIR/$TAR\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
+EVAL "tar -cf \"$BUILDS_DIR/UN1CA_Kernel-${DATE}${KSU_TAR_EXTENSION}-a53x.tar\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 EVAL "rm -f \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 )
 LOG_STEP_OUT
