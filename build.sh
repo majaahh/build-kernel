@@ -46,6 +46,7 @@ _PRINT_USAGE()
     echo "-h,--help        Prints this help menu"
     echo "-r,--regenerate  Regenerates the defconfig"
     echo "-k,--ksu         Makes a KernelSU Build"
+    echo "-u,--upload      Creates a release on GitHub"
 }
 
 SRC_DIR="$(_GET_SRC_DIR)"
@@ -85,9 +86,10 @@ AOSP_DIR="$PREV_DIR/aospclang"
 DATE="$(date +%Y%m%d-%H%M)"
 MONTH="$(date +%Y-%m)"
 BUILDS_DIR="$SRC_DIR/build/builds"
+TAR_NAME="UN1CA_Kernel-${DATE}-a53x.tar"
 REGENERATE=""
 KSU=""
-KSU_TAR_EXTENSION=""
+UPLOAD=""
 # ]
 
 export KBUILD_BUILD_USER="Majaahh"
@@ -106,9 +108,11 @@ while [[ "$1" == "-"* ]]; do
         exit 1
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
         KSU="true"
-        KSU_TAR_EXTENSION="-KernelSU"
+        TAR_NAME="UN1CA_Kernel-${DATE}-KernelSU-a53x.tar"
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         REGENERATE="true"
+    elif [[ "$1" == "-u" ]] || [[ "$1" == "--upload" ]]; then
+        UPLOAD="true"
     else
         LOGE "Unknown option: $1"
         _PRINT_USAGE
@@ -241,9 +245,31 @@ cd "$SRC_DIR/build"
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_BOOTIMG\" > \"boot.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_DTBOIMAGE\" > \"dtbo.img.lz4\""
 EVAL "lz4 -c -12 -B6 --content-size \"$OUT_VENDORBOOTIMG\" > \"vendor_boot.img.lz4\""
-EVAL "tar -cf \"$BUILDS_DIR/UN1CA_Kernel-${DATE}${KSU_TAR_EXTENSION}-a53x.tar\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
+EVAL "tar -cf \"$BUILDS_DIR/$TAR_NAME\" \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 EVAL "rm -f \"boot.img.lz4\" \"dtbo.img.lz4\" \"vendor_boot.img.lz4\""
 )
 LOG_STEP_OUT
+
+if [[ "$UPLOAD" == "true" ]]; then
+    LOG_STEP_IN true "Uploading TAR archive"
+
+    TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
+
+    if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
+        LOG "- Creating tag"
+        EVAL "git tag \"$TAG_NAME\""
+        EVAL "git push origin --tags"
+    fi
+
+    if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+        LOG "- Creating release"
+        EVAL "gh release create \"$TAG_NAME\" --title \"$TAG_NAME\""
+    fi
+
+    LOG "- Uploading $TAR_NAME"
+    EVAL "gh release upload \"$TAG_NAME\" \"$SRC_DIR/build/builds/$TAR_NAME\" --clobber"
+
+    LOG_STEP_OUT
+fi
 
 CLEANUP
