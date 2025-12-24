@@ -44,8 +44,8 @@ _PRINT_USAGE()
     echo "Usage: ./build/build.sh [arguments]"
     echo "Arguments:"
     echo "-h,--help        Prints this help menu"
-    echo "-r,--regenerate  Regenerates the defconfig"
     echo "-k,--ksu         Makes a KernelSU Build"
+    echo "-r,--regenerate  Regenerates the defconfig"
     echo "-u,--upload      Creates a release on GitHub"
 }
 
