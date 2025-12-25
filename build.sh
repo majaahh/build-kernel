@@ -41,7 +41,7 @@ _GET_SRC_DIR()
 
 _PRINT_USAGE()
 {
-    echo "Usage: ./build/build.sh [arguments]"
+    echo "Usage: ./build/build.sh [arguments] [device]"
     echo "Arguments:"
     echo "-h,--help        Prints this help menu"
     echo "-k,--ksu         Makes a KernelSU Build"
@@ -90,6 +90,7 @@ TAR_NAME="UN1CA_Kernel-${DATE}-a53x.tar"
 REGENERATE=""
 KSU=""
 UPLOAD=""
+DEVICE=""
 # ]
 
 export KBUILD_BUILD_USER="Majaahh"
@@ -122,6 +123,24 @@ while [[ "$1" == "-"* ]]; do
     shift
 done
 
+DEVICE="$1"
+
+if [[ "$#" -eq "0" ]] && [[ "$REGENERATE" != "true" ]]; then
+    _PRINT_USAGE
+    exit 1
+fi
+
+if [[ -z "$DEVICE" ]] && [[ "$REGENERATE" != "true" ]]; then
+    LOGE "No device specified"
+    _PRINT_USAGE
+    exit 1
+fi
+
+if [[ ! -f "$SRC_DIR/arch/arm64/configs/$DEVICE.config" ]]; then
+    LOGE "Configuration fragment for $DEVICE was not found"
+    exit 1
+fi
+
 CLEANUP
 
 if [[ ! -d "$AOSP_DIR" ]]; then
@@ -149,14 +168,17 @@ fi
 
 LOG_STEP_IN true "Starting build"
 LOG_STEP_IN "- Generating configuration"
-EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \"a53x_defconfig\" >/dev/null"
+EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \"s5e8825_defconfig\" >/dev/null"
 
 if [[ "$REGENERATE" == "true" ]]; then
-    LOG "- Copying configuration to arch/arm64/configs/a53x_defconfig"
-    EVAL "cp -a \"$OUTDIR/.config\" \"$SRC_DIR/arch/arm64/configs/a53x_defconfig\""
+    LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
+    EVAL "cp -a \"$OUTDIR/.config\" \"$SRC_DIR/arch/arm64/configs/s5e8825_defconfig\""
     LOG_STEP_OUT
     exit 0
 fi
+
+LOG "- Merging $DEVICE fragment"
+EVAL "make -j\"$(nproc --all)\" O=\"$OUTDIR\" CC=\"clang\" \"$DEVICE.config\" >/dev/null"
 
 if [[ "$KSU" == "true" ]]; then
     LOG "- Merging KernelSU fragment"
