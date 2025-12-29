@@ -1,4 +1,1 @@
-*.tar
-
-images/
-tmp/
+out/

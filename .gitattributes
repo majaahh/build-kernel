@@ -1,1 +1,2 @@
-vboot_platform/vendor/** binary
+prebuilts/** binary
+tools/** binary

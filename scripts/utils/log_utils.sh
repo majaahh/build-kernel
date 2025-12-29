@@ -1,5 +1,10 @@
-# https://github.com/salvogiangri/UN1CA/blob/9709f2557a63a27530ca6b2b0e7f9d007233a063/scripts/utils/log_utils.sh#L43-L104
+#!/bin/bash
+#
+# SPDX-FileCopyrightText: Majaahh
+# SPDX-License-Identifier: Apache-2.0
+#
 
+# https://github.com/salvogiangri/UN1CA/blob/9709f2557a63a27530ca6b2b0e7f9d007233a063/scripts/utils/log_utils.sh#L43-L104
 # [
 _SET_INDENT()
 {
@@ -26,8 +31,7 @@ LOGE()
     local RED="\033[0;31m"
     local RESET="\033[0m"
 
-    _SET_INDENT
-    echo -e "${RED}${1}${RESET}" >&2
+    echo -e "${RED}ERROR: ${1}${RESET}" >&2
 }
 
 # LOGW <message>
@@ -37,8 +41,7 @@ LOGW()
     local YELLOW="\033[0;33m"
     local RESET="\033[0m"
 
-    _SET_INDENT
-    echo -e "${YELLOW}${1}${RESET}" >&2
+    echo -e "${YELLOW}WARNING: ${1}${RESET}" >&2
 }
 
 # LOG_STEP_IN <bold> <message>
