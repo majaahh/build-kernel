@@ -90,35 +90,35 @@ else
 fi
 
 (
-cd "$KERNEL_DIR" || exit 1
+cd "$KERNEL_DIR"
 
 LOG_STEP_IN true "Building Kernel"
 LOG_STEP_IN "- Generating configuration"
-EVAL "make \"$MAKE_ARGS\" \"s5e8825_defconfig\" >/dev/null" || exit 1
+EVAL "make \"$MAKE_ARGS\" \"s5e8825_defconfig\" >/dev/null"
 
 if [[ "$REGENERATE" == "true" ]]; then
     LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
-    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\"" || exit 1
+    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\""
     LOG_STEP_OUT
     exit 0
 fi
 
 LOG "- Merging $DEVICE fragment"
-EVAL "make \"$MAKE_ARGS\" \"$DEVICE.config\" >/dev/null" || exit 1
+EVAL "make \"$MAKE_ARGS\" \"$DEVICE.config\" >/dev/null"
 
 if [[ "$KSU" == "true" ]]; then
     LOG "- Merging KernelSU fragment"
-    EVAL "make \"$MAKE_ARGS\" \"ksu.config\" >/dev/null" || exit 1
+    EVAL "make \"$MAKE_ARGS\" \"ksu.config\" >/dev/null"
 fi
 
 LOG "- Setting local version"
-EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git rev-parse --short HEAD)/g \"$BUILD_DIR/.config\"" || exit 1
+EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
 LOG_STEP_OUT
 LOG "- Building dtbs"
-EVAL "make \"$MAKE_ARGS\" \"dtbs\" >/dev/null" || exit 1
+EVAL "make \"$MAKE_ARGS\" \"dtbs\" >/dev/null"
 LOG "- Building Kernel"
-EVAL "make \"$MAKE_ARGS\" >/dev/null" || exit 1
-)
+EVAL "make \"$MAKE_ARGS\" >/dev/null"
+) || exit 1
 LOG_STEP_OUT
 
 LOG_STEP_IN true "Building Images"
@@ -145,8 +145,8 @@ LOG_STEP_OUT
 
 if [[ "$UPLOAD" == "true" ]]; then
     (
-    cd "$KERNEL_DIR" || exit 1
+    cd "$KERNEL_DIR"
 
     UPLOAD "$OUT/$TAR_NAME"
-    )
+    ) || exit 1
 fi

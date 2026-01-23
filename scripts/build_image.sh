@@ -20,8 +20,8 @@ _PRINT_USAGE()
 
 BUILD_BOOT_IMAGE()
 {
-    _CHECK_NON_EMPTY_PARAM "IMAGE" "$1" || exit 1
-    _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$2" || exit 1
+    _CHECK_NON_EMPTY_PARAM "IMAGE" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$2" || return 1
 
     local IMAGE="$1"
     local OUTPUT_DIR="$2"
@@ -37,7 +37,7 @@ BUILD_BOOT_IMAGE()
         EVAL "git submodule update --init -f --checkout"
         if [[ ! -f "$MKBOOTIMG" ]]; then
             LOGE "${MKBOOTIMG//$SRC_DIR\//} was not found"
-            exit 1
+            return 1
         fi
     fi
 
@@ -71,7 +71,7 @@ BUILD_BOOT_IMAGE()
             BUILD_DT_IMAGE "dtb" "$TMP_DIR"
         fi
 
-        EVAL "cd \"$OUT/modules\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || exit 1
+        EVAL "cd \"$OUT/modules\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
 
         if [[ -d "$TMP_DIR/ramdisk_platform" ]]; then
             EVAL "rm -rf \"$TMP_DIR/ramdisk_platform\""
@@ -82,7 +82,7 @@ BUILD_BOOT_IMAGE()
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk\""
         EVAL "cp -f \"$TMP_DIR/ramdisk_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk/fstab.s5e8825\""
 
-        EVAL "cd \"$TMP_DIR/ramdisk_platform\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || exit 1
+        EVAL "cd \"$TMP_DIR/ramdisk_platform\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
 
         if [[ -f "$TMP_DIR/bootconfig" ]]; then
             EVAL "rm -f \"$TMP_DIR/bootconfig\""
@@ -92,7 +92,7 @@ BUILD_BOOT_IMAGE()
     fi
 
     if [[ ! -d "$OUTPUT_DIR" ]]; then
-        EVAL "mkdir -p \"$OUTPUT_DIR\"" || exit 1
+        EVAL "mkdir -p \"$OUTPUT_DIR\"" || return 1
     fi
 
     if [[ -f "$OUTPUT_DIR/$IMAGE.img" ]]; then
@@ -117,8 +117,8 @@ BUILD_BOOT_IMAGE()
 
 BUILD_DT_IMAGE()
 {
-    _CHECK_NON_EMPTY_PARAM "IMAGE" "$1" || exit 1
-    _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$2" || exit 1
+    _CHECK_NON_EMPTY_PARAM "IMAGE" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$2" || return 1
 
     local IMAGE="$1"
     local OUTPUT_DIR="$2"
@@ -135,26 +135,26 @@ BUILD_DT_IMAGE()
         SIZE="8388608"
     fi
 
-    if [[ ! -f "$SRC_DIR/configs/$CONFIGURATION.cfg" ]]; then
+    if [[ ! -f "$SRC_DIR/configs/$CONFIGURATION.cfg" ]] && [[ "$IMAGE" == "dtbo" ]]; then
         LOGE "$CONFIGURATION.cfg was not found"
-        exit 1
+        return 1
     fi
 
     if [[ ! -d "$DTS_DIR" ]]; then
         LOGE "${DTS_DIR//$SRC_DIR\//} was not found"
-        exit 1
+        return 1
     fi
 
     LOG_STEP_IN "- Building $IMAGE image"
     if [[ ! -d "$OUTPUT_DIR" ]]; then
-        EVAL "mkdir -p \"$OUTPUT_DIR\"" || exit 1
+        EVAL "mkdir -p \"$OUTPUT_DIR\"" || return 1
     fi
 
     if [[ -f "$OUTPUT_DIR/$IMAGE.img" ]]; then
-        EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\"" || exit 1
+        EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\"" || return 1
     fi
 
-    EVAL "mkdtboimg cfg_create \"$OUTPUT_DIR/$IMAGE.img\" \"$SRC_DIR/configs/$CONFIGURATION.cfg\" -d \"$DTS_DIR\"" || exit 1
+    EVAL "mkdtboimg cfg_create \"$OUTPUT_DIR/$IMAGE.img\" \"$SRC_DIR/configs/$CONFIGURATION.cfg\" -d \"$DTS_DIR\"" || return 1
 
     if [[ "$SKIP_AVB" != "true" ]] && [[ "$IMAGE" == "dtbo" ]]; then
         SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE"
@@ -165,8 +165,8 @@ BUILD_DT_IMAGE()
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/internal/build_flashable_zip.sh#L486-L511
 SIGN_IMAGE_WITH_AVB()
 {
-    _CHECK_NON_EMPTY_PARAM "FILE" "$1" || exit 1
-    _CHECK_NON_EMPTY_PARAM "PARTITION_SIZE" "$2" || exit 1
+    _CHECK_NON_EMPTY_PARAM "FILE" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "PARTITION_SIZE" "$2" || return 1
 
     local FILE="$1"
     local PARTITION_SIZE="$2"
@@ -192,7 +192,7 @@ SIGN_IMAGE_WITH_AVB()
 
 if [[ "$#" -lt "3" ]]; then
     _PRINT_USAGE
-    exit 1
+    return 1
 fi
 
 IMAGE="$1"
@@ -208,7 +208,7 @@ if [[ "$IMAGE" != "boot" ]] && [[ "$IMAGE" != "dtb" ]] && \
     [[ "$IMAGE" != "dtbo" ]] && [[ "$IMAGE" != "vendor_boot" ]]; then
     LOGE "$1 is not a valid image"
     _PRINT_USAGE
-    exit 1
+    return 1
 fi
 
 while [[ "$1" == "-"* ]]; do
@@ -225,11 +225,11 @@ while [[ "$1" == "-"* ]]; do
 done
 
 if [[ "$IMAGE" == "dtb"* ]]; then
-    BUILD_DT_IMAGE "$IMAGE" "$OUTPUT_DIR"
+    BUILD_DT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
 
 if [[ "$IMAGE" == *"boot" ]]; then
-    BUILD_BOOT_IMAGE "$IMAGE" "$OUTPUT_DIR"
+    BUILD_BOOT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
 
 if [[ "$SKIP_LZ4" != "true" ]]; then

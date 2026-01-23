@@ -41,13 +41,13 @@ fi
 EVAL "mkdir -p \"$MODULES_INSTALL_DIR\""
 
 (
-cd "$KERNEL_DIR" || exit 1
+cd "$KERNEL_DIR"
 
 LOG "- Installing modules"
 EVAL "make -j\"$(nproc --all)\" O=\"$BUILD_DIR\" CC=\"clang\" \
     INSTALL_MOD_STRIP=\"--strip-debug --keep-section=.ARM.attributes\" \
     INSTALL_MOD_PATH=\"$MODULES_INSTALL_DIR\" \"modules_install\" >/dev/null" || exit 1
-)
+) || exit 1
 
 KMODULES_DIR="$(find "$MODULES_INSTALL_DIR/lib/modules" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
 MODULES_ORDER="$KMODULES_DIR/modules.order"
@@ -105,7 +105,7 @@ if [[ -f "$KMODULES_DIR/modules.dep" ]]; then
     }
 
     while IFS= read -r m; do
-        RESOLVE_DEPS "$m"
+        RESOLVE_DEPS "$m" || exit 1
     done < "$ALL_MODULES"
 
     for m in "${PRIORITY_MODULES[@]}"; do
@@ -153,7 +153,7 @@ EVAL "depmod 0.0 -b \"$MODULES_DIR\""
 EVAL "sed -i \"s/\([^ ]\+\)/\/lib\/modules\/\1/g\" \"$MODULES_DIR/lib/modules/0.0/modules.dep\""
 
 (
-cd "$MODULES_DIR/lib/modules/0.0" || exit 1
+cd "$MODULES_DIR/lib/modules/0.0"
 
 find . -type f -name 'modules.*' -print0 | while IFS= read -r -d '' i; do
     NAME="$(basename "$i")"
@@ -164,7 +164,7 @@ find . -type f -name 'modules.*' -print0 | while IFS= read -r -d '' i; do
         EVAL "rm -f \"$i\""
     fi
 done
-)
+) || exit 1
 
 if [[ -d "$MODULES_OUT" ]]; then
     EVAL "rm -rf \"$MODULES_OUT\""

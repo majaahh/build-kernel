@@ -72,7 +72,7 @@ GET_AOSP_CLANG()
 
 UPLOAD()
 {
-    _CHECK_NON_EMPTY_PARAM "ARCHIVE" "$1" || exit 1
+    _CHECK_NON_EMPTY_PARAM "ARCHIVE" "$1" || return 1
 
     local ARCHIVE="$1"
     local TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
