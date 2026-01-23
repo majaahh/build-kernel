@@ -144,5 +144,9 @@ EVAL "rm -f *\".img.lz4\""
 LOG_STEP_OUT
 
 if [[ "$UPLOAD" == "true" ]]; then
+    (
+    cd "$KERNEL_DIR" || exit 1
+
     UPLOAD "$OUT/$TAR_NAME"
+    )
 fi
