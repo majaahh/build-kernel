@@ -90,7 +90,7 @@ UPLOAD()
         EVAL "gh release create \"$TAG_NAME\" --title \"$TAG_NAME\""
     fi
 
-    LOG "- Uploading $ARCHIVE"
+    LOG "- Uploading "${ARCHIVE//$SRC_DIR\//}""
     EVAL "gh release upload \"$TAG_NAME\" \"$ARCHIVE\" --clobber"
 
     LOG_STEP_OUT
