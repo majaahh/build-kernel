@@ -77,7 +77,7 @@ UPLOAD()
     local ARCHIVE="$1"
     local TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
 
-    LOG_STEP_IN true "Uploading TAR archive"
+    LOG_STEP_IN "Uploading TAR archive"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
         LOG "- Creating tag"
