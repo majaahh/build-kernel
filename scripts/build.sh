@@ -9,6 +9,7 @@ _PRINT_USAGE()
 {
     echo "Usage: build.sh [arguments] <device>"
     echo "Arguments:"
+    echo "-f,--flash       Flashes latest build"
     echo "-h,--help        Prints this help menu"
     echo "-k,--ksu         Makes a KernelSU Build"
     echo "-r,--regenerate  Regenerates the defconfig"
@@ -19,6 +20,7 @@ source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x.tar"
+FLASH=""
 KSU=""
 BUILD_IMAGE_ARGUMENTS=""
 REGENERATE=""
@@ -28,7 +30,9 @@ MAKE_ARGS="-j$(nproc --all)\" \"CC=clang\" \"O=$BUILD_DIR\" \"KBUILD_BUILD_USER=
 # ]
 
 while [[ "$1" == "-"* ]]; do
-    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    if [[ "$1" == "-f" ]] || [[ "$1" == "--flash" ]]; then
+        FLASH="true"
+    elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
@@ -144,6 +148,11 @@ EVAL "tar -cf \"$OUT/$TAR_NAME\" *\"img.lz4\""
 EVAL "rm -f *\".img.lz4\""
 )
 LOG_STEP_OUT
+
+if [[ "$FLASH" == "true" ]]; then
+    LOG "- Flashing "${OUT//$SRC_DIR\//}"/$TAR_NAME"
+    "$SRC_DIR/scripts/flash.sh" -a "$OUT/$TAR_NAME"
+fi
 
 if [[ "$UPLOAD" == "true" ]]; then
     (
