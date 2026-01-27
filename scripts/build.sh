@@ -149,6 +149,10 @@ EVAL "rm -f *\".img.lz4\""
 )
 LOG_STEP_OUT
 
+if [[ "$FLASH" == "true" ]] || [[ "$UPLOAD" == "true" ]]; then
+    LOG_STEP_IN true "Running post-build scripts"
+fi
+
 if [[ "$FLASH" == "true" ]]; then
     LOG "- Flashing "${OUT//$SRC_DIR\//}"/$TAR_NAME"
     "$SRC_DIR/scripts/flash.sh" -a "$OUT/$TAR_NAME"
@@ -161,3 +165,5 @@ if [[ "$UPLOAD" == "true" ]]; then
     UPLOAD "$OUT/$TAR_NAME"
     ) || exit 1
 fi
+
+LOG_STEP_OUT
