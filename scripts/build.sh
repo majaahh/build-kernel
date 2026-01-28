@@ -27,7 +27,7 @@ KSU=""
 REGENERATE=""
 UPLOAD=""
 DEVICE=""
-MAKE_ARGS="-j$(nproc --all)\" \"CC=clang\" \"O=$BUILD_DIR\" \"KBUILD_BUILD_USER=Majaahh\" \"KBUILD_BUILD_HOST=PC"
+MAKE_ARGS="-C\" \"$KERNEL_DIR\" \"-j$(nproc --all)\" \"CC=clang\" \"O=$BUILD_DIR\" \"KBUILD_BUILD_USER=Majaahh\" \"KBUILD_BUILD_HOST=PC"
 # ]
 
 while [[ "$1" == "-"* ]]; do
@@ -96,9 +96,6 @@ else
     fi
 fi
 
-(
-cd "$KERNEL_DIR"
-
 LOG_STEP_IN true "Building Kernel"
 LOG_STEP_IN "- Generating configuration"
 EVAL "make \"$MAKE_ARGS\" \"s5e8825_defconfig\" >/dev/null"
@@ -125,7 +122,6 @@ LOG "- Building dtbs"
 EVAL "make \"$MAKE_ARGS\" \"dtbs\" >/dev/null"
 LOG "- Building Kernel"
 EVAL "make \"$MAKE_ARGS\" >/dev/null"
-) || exit 1
 LOG_STEP_OUT
 
 LOG_STEP_IN true "Building Images"
