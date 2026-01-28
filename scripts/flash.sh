@@ -47,7 +47,7 @@ if [[ ! -f "$FILE" ]]; then
     exit 1
 fi
 
-if adb devices | grep -Ewq "device|recovery"; then
+if adb devices | grep -Ew "device|recovery" &>/dev/null; then
     LOG "- Rebooting device to download mode"
     EVAL "adb reboot download"
 fi
