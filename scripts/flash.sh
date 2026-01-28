@@ -44,6 +44,11 @@ if [[ ! -f "$FILE" ]]; then
     exit 1
 fi
 
+if adb devices | grep -wq device; then
+    LOG "- Rebooting device to download mode"
+    EVAL "adb reboot download"
+fi
+
 if ! lsusb | grep -q "GT-I9100"; then
     LOGE "Device was not found. Is it in download mode?"
     exit 1
