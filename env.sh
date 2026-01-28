@@ -1,10 +1,14 @@
+# shellcheck shell=bash
 #
 # SPDX-FileCopyrightText: Majaahh
 # SPDX-License-Identifier: Apache-2.0
 #
 
-export SRC_DIR="$(git rev-parse --show-toplevel)"
-export PREV_DIR="$(readlink -f ../)"
+SRC_DIR="$(git rev-parse --show-toplevel)"
+PREV_DIR="$(readlink -f ../)"
+
+export SRC_DIR
+export PREV_DIR
 export OUT="$SRC_DIR/out"
 export BUILD_DIR="$OUT/build"
 export IMAGES_DIR="$OUT/images"
@@ -19,4 +23,4 @@ if [[ ":$PATH:" != *":$TOOLS_DIR:"* ]]; then
     export PATH="$TOOLS_DIR:$PATH"
 fi
 
-alias m="$SRC_DIR/scripts/build.sh"
+alias m='$SRC_DIR/scripts/build.sh'

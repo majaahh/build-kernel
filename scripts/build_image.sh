@@ -5,7 +5,9 @@
 #
 
 # [
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 _PRINT_USAGE()
@@ -30,7 +32,6 @@ BUILD_BOOT_IMAGE()
     local MKBOOTIMG_ARGUMENTS
     local KERNEL="$BUILD_DIR/arch/arm64/boot/Image"
     local RAMDISK="$SRC_DIR/prebuilts/boot/ramdisk"
-    local MONTH="$(date +%Y-%m)"
 
     if [[ ! -f "$MKBOOTIMG" ]]; then
         LOG "- Fetching submodules"
@@ -43,7 +44,7 @@ BUILD_BOOT_IMAGE()
 
     MKBOOTIMG_ARGUMENTS+="--header_version 4 "
     MKBOOTIMG_ARGUMENTS+="--os_version 16.0.0 "
-    MKBOOTIMG_ARGUMENTS+="--os_patch_level \"$MONTH\" "
+    MKBOOTIMG_ARGUMENTS+="--os_patch_level \"$(date +%Y-%m)\" "
 
     if [[ "$IMAGE" == "boot" ]]; then
         SIZE="67108864"

@@ -5,7 +5,9 @@
 #
 
 # [
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/common_utils.sh"
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh"
 
 _PRINT_USAGE()

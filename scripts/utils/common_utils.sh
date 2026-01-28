@@ -5,6 +5,7 @@
 #
 
 # [
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || return 1
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/common_utils.sh#L21-L42
@@ -49,12 +50,13 @@ EVAL()
 
 GET_AOSP_CLANG()
 {
-    local AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
+    local AOSP_LIST
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
 
     LOG_STEP_IN true "Downloading clang"
     EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
 
+    AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
     CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
 
     LOG "- Latest AOSP Clang is $CURRENT_CLANG"
@@ -75,9 +77,11 @@ UPLOAD()
     _CHECK_NON_EMPTY_PARAM "ARCHIVE" "$1" || return 1
 
     local ARCHIVE="$1"
-    local TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
+    local TAG_NAME
 
     LOG_STEP_IN "Uploading TAR archive"
+
+    TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
         LOG "- Creating tag"
@@ -90,7 +94,7 @@ UPLOAD()
         EVAL "gh release create \"$TAG_NAME\" --title \"$TAG_NAME\""
     fi
 
-    LOG "- Uploading "${ARCHIVE//$SRC_DIR\//}""
+    LOG "- Uploading ${ARCHIVE//$SRC_DIR\//}"
     EVAL "gh release upload \"$TAG_NAME\" \"$ARCHIVE\" --clobber"
 
     LOG_STEP_OUT

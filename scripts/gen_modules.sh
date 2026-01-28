@@ -4,7 +4,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # [
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/common_utils.sh"
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh"
 
 _PRINT_USAGE()
@@ -53,7 +55,7 @@ KMODULES_DIR="$(find "$MODULES_INSTALL_DIR/lib/modules" -mindepth 1 -maxdepth 1 
 MODULES_ORDER="$KMODULES_DIR/modules.order"
 
 if [[ ! -f "$KMODULES_DIR/modules.order" ]]; then
-    LOGE "modules.order not found in "${KMODULES_DIR//$SRC_DIR\//}""
+    LOGE "modules.order not found in ${KMODULES_DIR//$SRC_DIR\//}"
     exit 1
 fi
 

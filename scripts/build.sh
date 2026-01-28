@@ -16,13 +16,14 @@ _PRINT_USAGE()
     echo "-u,--upload      Creates a release on GitHub"
 }
 
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
+# shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x.tar"
 FLASH=""
 KSU=""
-BUILD_IMAGE_ARGUMENTS=""
 REGENERATE=""
 UPLOAD=""
 DEVICE=""
@@ -154,7 +155,7 @@ if [[ "$FLASH" == "true" ]] || [[ "$UPLOAD" == "true" ]]; then
 fi
 
 if [[ "$FLASH" == "true" ]]; then
-    LOG "- Flashing "${OUT//$SRC_DIR\//}"/$TAR_NAME"
+    LOG "- Flashing ${OUT//$SRC_DIR\//}/$TAR_NAME"
     "$SRC_DIR/scripts/flash.sh" -a "$OUT/$TAR_NAME"
 fi
 
