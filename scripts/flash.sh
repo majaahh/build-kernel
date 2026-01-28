@@ -22,6 +22,7 @@ _PRINT_USAGE()
 
 PART="$1"
 FILE="$2"
+RETRY=""
 # ]
 
 if [[ "$#" -lt "2" ]]; then
@@ -51,9 +52,17 @@ if adb devices | grep -wq device; then
     EVAL "adb reboot download"
 fi
 
-if ! lsusb | grep -q "GT-I9100"; then
-    LOGE "Device was not found. Is it in download mode?"
-    exit 1
-fi
+while true; do
+    if ! lsusb | grep -q "GT-I9100"; then
+        if [[ "$RETRY" != "true" ]]; then
+            LOG "- Waiting for device"
+            RETRY="true"
+        fi
+    else
+        break
+    fi
+
+    sleep 0.5
+done
 
 EVAL "odin4 \"$PART\" \"$FILE\""
