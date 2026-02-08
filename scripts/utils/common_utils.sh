@@ -79,8 +79,6 @@ UPLOAD()
     local ARCHIVE="$1"
     local TAG_NAME
 
-    LOG_STEP_IN "Uploading TAR archive"
-
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
@@ -96,7 +94,5 @@ UPLOAD()
 
     LOG "- Uploading ${ARCHIVE//$SRC_DIR\//}"
     EVAL "gh release upload \"$TAG_NAME\" \"$ARCHIVE\" --clobber"
-
-    LOG_STEP_OUT
 }
 # ]
