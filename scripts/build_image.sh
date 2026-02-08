@@ -193,7 +193,7 @@ SIGN_IMAGE_WITH_AVB()
 
 if [[ "$#" -lt "3" ]]; then
     _PRINT_USAGE
-    return 1
+    exit 1
 fi
 
 IMAGE="$1"
@@ -209,7 +209,7 @@ if [[ "$IMAGE" != "boot" ]] && [[ "$IMAGE" != "dtb" ]] && \
     [[ "$IMAGE" != "dtbo" ]] && [[ "$IMAGE" != "vendor_boot" ]]; then
     LOGE "$1 is not a valid image"
     _PRINT_USAGE
-    return 1
+    exit 1
 fi
 
 while [[ "$1" == "-"* ]]; do
