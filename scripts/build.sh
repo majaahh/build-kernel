@@ -16,12 +16,30 @@ _PRINT_USAGE()
     echo "-u,--upload      Creates a release on GitHub"
 }
 
+CREATE_TAR_ARCHIVE()
+{
+    _CHECK_NON_EMPTY_PARAM "TAR_OUT" "$1"
+    _CHECK_NON_EMPTY_PARAM "IMAGES" "$2"
+
+    local TAR_OUT="$1"
+    shift
+
+    local IMAGES=("$@")
+
+    if [[ -f "$TAR_OUT" ]]; then
+        EVAL "rm -f \"$TAR_OUT\""
+    fi
+
+    EVAL "tar -cf \"$TAR_OUT\" --transform='s|.*/||' ${IMAGES[*]}" || return 1
+}
+
 # shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
 # shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
-TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x.tar"
+KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x"
+DTBO_TAR_NAME="UN1CA_Dtbo-$(date +%Y%m%d-%H%M)-a53x"
 FLASH=""
 KSU=""
 REGENERATE=""
@@ -37,7 +55,7 @@ while [[ "$1" == "-"* ]]; do
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
-        TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-KernelSU-a53x.tar"
+        KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-KernelSU-a53x"
         KSU="true"
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         REGENERATE="true"
@@ -124,23 +142,35 @@ LOG "- Building Kernel"
 EVAL "make \"$MAKE_ARGS\" >/dev/null"
 LOG_STEP_OUT
 
-LOG_STEP_IN true "Building TAR Archive"
-if [[ -d "$IMAGES_DIR" ]]; then
-   EVAL "rm -rf \"$IMAGES_DIR\""
+LOG_STEP_IN true "Building TAR Archives"
+if [[ -d "$IMAGES_DIR/kernel" ]]; then
+   EVAL "rm -rf \"$IMAGES_DIR/kernel\""
 fi
-EVAL "mkdir -p \"$IMAGES_DIR\""
+EVAL "mkdir -p \"$IMAGES_DIR/kernel\""
 
-for i in "boot" "dtbo" "vendor_boot"; do
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR" -d "$DEVICE"
+for i in "boot" "vendor_boot"; do
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" -d "$DEVICE"
 done
 
-(
-cd "$IMAGES_DIR" || exit 1
+LOG "- Creating Kernel TAR Archive"
+CREATE_TAR_ARCHIVE "$OUT/$KERNEL_TAR_NAME.tar" "$IMAGES_DIR/kernel/boot.img.lz4" "$IMAGES_DIR/kernel/vendor_boot.img.lz4"
 
-LOG "- Creating TAR Archive"
-EVAL "tar -cf \"$OUT/$TAR_NAME\" *\"img.lz4\""
-EVAL "rm -f *\".img.lz4\""
-) || exit 1
+if [[ -d "$IMAGES_DIR/dtbo" ]]; then
+    EVAL "rm -rf \"$IMAGES_DIR/dtbo\""
+fi
+EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
+
+if [[ "$DEVICE" == "a53x" ]]; then
+    for i in "" "_jpn"; do
+        "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "${DEVICE}${i}" || exit 1
+        LOG "- Creating Dtbo TAR Archive"
+        CREATE_TAR_ARCHIVE "$OUT/${DTBO_TAR_NAME}${i}.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4"
+    done
+else
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
+    LOG "- Creating Dtbo TAR Archive"
+    CREATE_TAR_ARCHIVE "$OUT/${DTBO_TAR_NAME}.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4"
+fi
 LOG_STEP_OUT
 
 if [[ "$FLASH" == "true" ]] || [[ "$UPLOAD" == "true" ]]; then
@@ -148,15 +178,19 @@ if [[ "$FLASH" == "true" ]] || [[ "$UPLOAD" == "true" ]]; then
 fi
 
 if [[ "$FLASH" == "true" ]]; then
-    LOG "- Flashing ${OUT//$SRC_DIR\//}/$TAR_NAME"
-    "$SRC_DIR/scripts/flash.sh" -a "$OUT/$TAR_NAME"
+    LOG "- Flashing ${OUT//$SRC_DIR\//}/$KERNEL_TAR_NAME.tar"
+    "$SRC_DIR/scripts/flash.sh" -a "$OUT/$KERNEL_TAR_NAME.tar"
 fi
 
 if [[ "$UPLOAD" == "true" ]]; then
     (
     cd "$KERNEL_DIR"
 
-    UPLOAD "$OUT/$TAR_NAME"
+    UPLOAD "$OUT/$KERNEL_TAR_NAME.tar"
+    UPLOAD "$OUT/$DTBO_TAR_NAME.tar"
+    if [[ "$DEVICE" == "a53x" ]]; then
+        UPLOAD "$OUT/${DTBO_TAR_NAME}_jpn.tar"
+    fi
     ) || exit 1
 fi
 

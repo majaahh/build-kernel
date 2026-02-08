@@ -77,8 +77,11 @@ UPLOAD()
     _CHECK_NON_EMPTY_PARAM "ARCHIVE" "$1" || return 1
 
     local ARCHIVE="$1"
+    local ARCHIVE_NAME
     local TAG_NAME
+    local REPO="majaahh/android_kernel_samsung_a53x"
 
+    ARCHIVE_NAME="$(basename "$ARCHIVE")"
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
@@ -90,6 +93,22 @@ UPLOAD()
     if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
         LOG "- Creating release"
         EVAL "gh release create \"$TAG_NAME\" --title \"$TAG_NAME\""
+    fi
+
+    if [[ "$ARCHIVE_NAME" == UN1CA_Dtbo-* ]]; then
+        local VARIANT="${ARCHIVE_NAME##*-}"
+        local VARIANT="${VARIANT%.tar}"
+
+        # shellcheck disable=SC2269
+        VARIANT="$VARIANT" \
+        gh release view "$TAG_NAME" --repo "$REPO" --json assets \
+            --jq "
+                .assets[].name
+                | select(
+                    startswith(\"UN1CA_Dtbo-\")
+                    and endswith(env.VARIANT + \".tar\")
+                )
+            " | grep -q . && return 0
     fi
 
     LOG "- Uploading ${ARCHIVE//$SRC_DIR\//}"
