@@ -124,7 +124,7 @@ LOG "- Building Kernel"
 EVAL "make \"$MAKE_ARGS\" >/dev/null"
 LOG_STEP_OUT
 
-LOG_STEP_IN true "Building Images"
+LOG_STEP_IN true "Building TAR Archive"
 if [[ -d "$IMAGES_DIR" ]]; then
    EVAL "rm -rf \"$IMAGES_DIR\""
 fi
@@ -133,9 +133,6 @@ EVAL "mkdir -p \"$IMAGES_DIR\""
 for i in "boot" "dtbo" "vendor_boot"; do
     "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR" -d "$DEVICE"
 done
-LOG_STEP_OUT
-
-LOG_STEP_IN true "Building TAR archive"
 
 (
 cd "$IMAGES_DIR" || exit 1
