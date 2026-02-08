@@ -12,9 +12,10 @@ source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 _PRINT_USAGE()
 {
-    echo "Usage: build_image.sh <image> <device> <output_dir> [arguments]"
+    echo "Usage: build_image.sh <image> <output_dir> [arguments]"
     echo "Images: boot, dtb, dtbo, vendor_boot"
     echo "Arguments:"
+    echo "-d,--device      Specify device codename (required for dtbo)"
     echo "-h,--help        Prints this help menu"
     echo "--skip-avb       Skips AVB Sign"
     echo "--skip-lz4       Skips LZ4 Compression"
@@ -126,6 +127,12 @@ BUILD_DT_IMAGE()
     local CONFIGURATION
     local DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
 
+    if [[ -z "$DEVICE" ]] && [[ "$IMAGE" == "dtbo" ]]; then
+        LOGE "Device must be set for dtbo build"
+        _PRINT_USAGE
+        return 1
+    fi
+
     if [[ "$IMAGE" == "dtb" ]]; then
         CONFIGURATION="s5e8825"
     elif [[ "$IMAGE" == "dtbo" ]]; then
@@ -191,18 +198,18 @@ SIGN_IMAGE_WITH_AVB()
     fi
 }
 
-if [[ "$#" -lt "3" ]]; then
+if [[ "$#" -lt "2" ]]; then
     _PRINT_USAGE
     exit 1
 fi
 
 IMAGE="$1"
-DEVICE="$2"
-OUTPUT_DIR="$3"
+OUTPUT_DIR="$2"
+DEVICE=""
 SKIP_AVB=""
 SKIP_LZ4=""
 
-shift 3
+shift 2
 # ]
 
 if [[ "$IMAGE" != "boot" ]] && [[ "$IMAGE" != "dtb" ]] && \
@@ -213,7 +220,15 @@ if [[ "$IMAGE" != "boot" ]] && [[ "$IMAGE" != "dtb" ]] && \
 fi
 
 while [[ "$1" == "-"* ]]; do
-    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    if [[ "$1" == "-d" ]] || [[ "$1" == "--device" ]]; then
+        if [[ -z "$2" ]] || [[ "$2" == "-"* ]]; then
+            LOGE "Missing argument for $1"
+            _PRINT_USAGE
+            exit 1
+        fi
+        DEVICE="$2"
+        shift
+    elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "--skip-avb" ]]; then

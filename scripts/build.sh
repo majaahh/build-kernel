@@ -131,7 +131,7 @@ fi
 EVAL "mkdir -p \"$IMAGES_DIR\""
 
 for i in "boot" "dtbo" "vendor_boot"; do
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$DEVICE" "$IMAGES_DIR"
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR" -d "$DEVICE"
 done
 LOG_STEP_OUT
 
