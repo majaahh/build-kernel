@@ -140,7 +140,7 @@ cd "$IMAGES_DIR" || exit 1
 LOG "- Creating TAR Archive"
 EVAL "tar -cf \"$OUT/$TAR_NAME\" *\"img.lz4\""
 EVAL "rm -f *\".img.lz4\""
-)
+) || exit 1
 LOG_STEP_OUT
 
 if [[ "$FLASH" == "true" ]] || [[ "$UPLOAD" == "true" ]]; then
