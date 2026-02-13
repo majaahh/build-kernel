@@ -163,12 +163,12 @@ EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
 if [[ "$DEVICE" == "a53x" ]]; then
     for i in "" "_jpn"; do
         "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "${DEVICE}${i}" || exit 1
-        LOG "- Creating Dtbo TAR Archive"
+        LOG "- Creating dtbo TAR Archive"
         CREATE_TAR_ARCHIVE "$OUT/${DTBO_TAR_NAME}${i}.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4"
     done
 else
     "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
-    LOG "- Creating Dtbo TAR Archive"
+    LOG "- Creating dtbo TAR Archive"
     CREATE_TAR_ARCHIVE "$OUT/${DTBO_TAR_NAME}.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4"
 fi
 LOG_STEP_OUT
