@@ -100,7 +100,7 @@ if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
     LOG_STEP_OUT
 fi
 
-if [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]]; then
+if [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]] && [[ -z "$REGENERATE" ]]; then
     LOGE "Configuration fragment for $DEVICE was not found"
     exit 1
 fi
