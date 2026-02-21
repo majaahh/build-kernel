@@ -72,17 +72,6 @@ done
 
 DEVICE="$1"
 
-if [[ "$#" -eq "0" ]] && [[ "$REGENERATE" != "true" ]]; then
-    _PRINT_USAGE
-    exit 1
-fi
-
-if [[ -z "$DEVICE" ]] && [[ "$REGENERATE" != "true" ]]; then
-    LOGE "No device specified"
-    _PRINT_USAGE
-    exit 1
-fi
-
 if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN true "Setting up kernel source"
 
@@ -98,11 +87,6 @@ if [[ ! -d "$KERNEL_DIR" ]]; then
     ) || exit 1
 
     LOG_STEP_OUT
-fi
-
-if [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]] && [[ -z "$REGENERATE" ]]; then
-    LOGE "Configuration fragment for $DEVICE was not found"
-    exit 1
 fi
 
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
@@ -125,8 +109,10 @@ if [[ "$REGENERATE" == "true" ]]; then
     exit 0
 fi
 
-LOG "- Merging $DEVICE fragment"
-EVAL "make \"$MAKE_ARGS\" \"$DEVICE.config\" >/dev/null"
+if [[ -z "$DEVICE" ]]; then
+    LOG "- Merging $DEVICE fragment"
+    EVAL "make \"$MAKE_ARGS\" \"$DEVICE.config\" >/dev/null"
+fi
 
 if [[ "$KSU" == "true" ]]; then
     LOG "- Merging KernelSU fragment"
