@@ -83,12 +83,12 @@ if [[ -z "$DEVICE" ]] && [[ "$REGENERATE" != "true" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
+if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN true "Setting up kernel source"
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
         LOG "- Cloning kernel source"
-        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/majaahh/android_kernel_samsung_a53x.git\" \"$KERNEL_DIR\""
+        EVAL "git clone -j\"$(nproc --all)\" \"git@github.com:majaahh/android_kernel_samsung_s5e8925.git\" \"$KERNEL_DIR\""
     fi
 
     LOG "- Fetching submodules"
@@ -116,11 +116,11 @@ fi
 
 LOG_STEP_IN true "Building Kernel"
 LOG_STEP_IN "- Generating configuration"
-EVAL "make \"$MAKE_ARGS\" \"s5e8825_defconfig\" >/dev/null"
+EVAL "make \"$MAKE_ARGS\" \"s5e8925_defconfig\" >/dev/null"
 
 if [[ "$REGENERATE" == "true" ]]; then
-    LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
-    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\""
+    LOG "- Copying configuration to arch/arm64/configs/s5e8925_defconfig"
+    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8925_defconfig\""
     LOG_STEP_OUT
     exit 0
 fi
