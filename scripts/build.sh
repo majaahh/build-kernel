@@ -39,7 +39,7 @@ source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x"
-DTBO_TAR_NAME="UN1CA_Dtbo-$(date +%Y%m%d-%H%M)-a53x"
+DTBO_TAR_NAME="UN1CA_DTBO-$(date +%Y%m%d-%H%M)-a53x"
 FLASH=""
 KSU=""
 REGENERATE=""
