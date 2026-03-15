@@ -48,6 +48,23 @@ EVAL()
     fi
 }
 
+CREATE_TAR_ARCHIVE()
+{
+    _CHECK_NON_EMPTY_PARAM "TAR_OUT" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "IMAGES" "$2" || return 1
+
+    local TAR_OUT="$1"
+    shift
+
+    local IMAGES=("$@")
+
+    if [[ -f "$TAR_OUT" ]]; then
+        EVAL "rm -f \"$TAR_OUT\""
+    fi
+
+    EVAL "tar -cf \"$TAR_OUT\" --transform='s|.*/||' ${IMAGES[*]}" || return 1
+}
+
 GET_AOSP_CLANG()
 {
     local AOSP_LIST
