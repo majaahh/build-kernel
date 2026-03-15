@@ -29,8 +29,8 @@ BUILD_BOOT_IMAGE()
     local IMAGE="$1"
     local OUTPUT_DIR="$2"
     local SIZE
-    local MKBOOTIMG="$SRC_DIR/external//mkbootimg/mkbootimg.py"
-    local MKBOOTIMG_ARGUMENTS
+    local MKBOOTIMG="$SRC_DIR/external/mkbootimg/mkbootimg.py"
+    local CMD
     local KERNEL="$BUILD_DIR/arch/arm64/boot/Image"
     local RAMDISK="$SRC_DIR/prebuilts/boot/ramdisk"
 
@@ -43,34 +43,35 @@ BUILD_BOOT_IMAGE()
         fi
     fi
 
-    MKBOOTIMG_ARGUMENTS+="--header_version 4 "
-    MKBOOTIMG_ARGUMENTS+="--os_version 16.0.0 "
-    MKBOOTIMG_ARGUMENTS+="--os_patch_level \"$(date +%Y-%m)\" "
+    CMD+="$MKBOOTIMG "
+    CMD+="--header_version 4 "
+    CMD+="--os_version 16.0.0 "
+    CMD+="--os_patch_level \"$(date +%Y-%m)\" "
 
     if [[ "$IMAGE" == "boot" ]]; then
         SIZE="67108864"
-        MKBOOTIMG_ARGUMENTS+="--kernel \"$KERNEL\" "
-        MKBOOTIMG_ARGUMENTS+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
-        MKBOOTIMG_ARGUMENTS+="--ramdisk \"$RAMDISK\""
+        CMD+="--kernel \"$KERNEL\" "
+        CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
+        CMD+="--ramdisk \"$RAMDISK\""
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
         SIZE="33554432"
-        MKBOOTIMG_ARGUMENTS+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
-        MKBOOTIMG_ARGUMENTS+="--vendor_bootconfig \"$TMP_DIR/bootconfig\" "
-        MKBOOTIMG_ARGUMENTS+="--dtb \"$TMP_DIR/dtb.img\" "
-        MKBOOTIMG_ARGUMENTS+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
-        MKBOOTIMG_ARGUMENTS+="--ramdisk_type \"dlkm\" "
-        MKBOOTIMG_ARGUMENTS+="--ramdisk_name \"dlkm\" "
-        MKBOOTIMG_ARGUMENTS+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
+        CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
+        CMD+="--vendor_bootconfig \"$TMP_DIR/bootconfig\" "
+        CMD+="--dtb \"$TMP_DIR/dtb.img\" "
+        CMD+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
+        CMD+="--ramdisk_type \"dlkm\" "
+        CMD+="--ramdisk_name \"dlkm\" "
+        CMD+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
     fi
 
     LOG_STEP_IN "- Building $IMAGE image"
     if [[ "$IMAGE" == "vendor_boot" ]]; then
         LOG_STEP_IN "- Generating modules"
-        "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules"
+        "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules" || return 1
         LOG_STEP_OUT
 
         if [[ ! -f "$TMP_DIR/dtb.img" ]]; then
-            BUILD_DT_IMAGE "dtb" "$TMP_DIR"
+            BUILD_DT_IMAGE "dtb" "$TMP_DIR" || return 1
         fi
 
         EVAL "cd \"$OUT/modules\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
@@ -101,14 +102,14 @@ BUILD_BOOT_IMAGE()
         EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\""
     fi
 
-    EVAL "\"$MKBOOTIMG\" $MKBOOTIMG_ARGUMENTS"
+    EVAL "$CMD" || return 1
 
     if [[ "$IMAGE" == "vendor_boot" ]]; then
         EVAL "rm -f \"$TMP_DIR/dtb.img\""
     fi
 
-    if [[ "$SKIP_AVB" != "true" ]]; then
-        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE"
+    if ! $SKIP_AVB; then
+        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE" || return 1
     fi
 
     if [[ -d "$TMP_DIR" ]]; then
@@ -125,6 +126,7 @@ BUILD_DT_IMAGE()
     local IMAGE="$1"
     local OUTPUT_DIR="$2"
     local CONFIGURATION
+    local CMD
     local DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
 
     if [[ -z "$DEVICE" ]] && [[ "$IMAGE" == "dtbo" ]]; then
@@ -142,6 +144,11 @@ BUILD_DT_IMAGE()
         DTS_DIR+="/samsung/$(echo "$DEVICE" | cut -d"_" -f1)"
         SIZE="8388608"
     fi
+
+    CMD+="mkdtboimg cfg_create "
+    CMD+="\"$OUTPUT_DIR/$IMAGE.img\" "
+    CMD+="\"$SRC_DIR/configs/$CONFIGURATION.cfg\" "
+    CMD+="-d \"$DTS_DIR\""
 
     if [[ ! -f "$SRC_DIR/configs/$CONFIGURATION.cfg" ]] && [[ "$IMAGE" == "dtbo" ]]; then
         LOGE "$CONFIGURATION.cfg was not found"
@@ -162,10 +169,10 @@ BUILD_DT_IMAGE()
         EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\"" || return 1
     fi
 
-    EVAL "mkdtboimg cfg_create \"$OUTPUT_DIR/$IMAGE.img\" \"$SRC_DIR/configs/$CONFIGURATION.cfg\" -d \"$DTS_DIR\"" || return 1
+    EVAL "$CMD" || return 1
 
-    if [[ "$SKIP_AVB" != "true" ]] && [[ "$IMAGE" == "dtbo" ]]; then
-        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE"
+    if ! $SKIP_AVB && [[ "$IMAGE" == "dtbo" ]]; then
+        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE" || return 1
     fi
     LOG_STEP_OUT
 }
@@ -206,8 +213,8 @@ fi
 IMAGE="$1"
 OUTPUT_DIR="$2"
 DEVICE=""
-SKIP_AVB=""
-SKIP_LZ4=""
+SKIP_AVB=false
+SKIP_LZ4=false
 
 shift 2
 # ]
@@ -232,9 +239,9 @@ while [[ "$1" == "-"* ]]; do
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "--skip-avb" ]]; then
-        SKIP_AVB="true"
+        SKIP_AVB=true
     elif [[ "$1" == "--skip-lz4" ]]; then
-        SKIP_LZ4="true"
+        SKIP_LZ4=true
     fi
 
     shift
@@ -248,7 +255,7 @@ if [[ "$IMAGE" == *"boot" ]]; then
     BUILD_BOOT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
 
-if [[ "$SKIP_LZ4" != "true" ]]; then
+if ! $SKIP_LZ4; then
     LOG_STEP_IN
 
     if [[ -f "$OUTPUT_DIR/$IMAGE.img.lz4" ]]; then

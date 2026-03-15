@@ -22,7 +22,7 @@ _PRINT_USAGE()
 
 PART="$1"
 FILE="$2"
-RETRY=""
+RETRY=false
 # ]
 
 if [[ "$#" -lt "2" ]]; then
@@ -54,9 +54,9 @@ fi
 
 while true; do
     if ! lsusb | grep -q "GT-I9100"; then
-        if [[ "$RETRY" != "true" ]]; then
+        if ! $RETRY; then
             LOG "- Waiting for device"
-            RETRY="true"
+            RETRY=true
         fi
     else
         break
