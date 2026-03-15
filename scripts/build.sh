@@ -58,11 +58,6 @@ done
 
 DEVICE="$1"
 
-if ! $REGENERATE && [[ "$#" -eq "0" ]]; then
-    _PRINT_USAGE
-    exit 1
-fi
-
 if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
     LOGE "No device specified"
     _PRINT_USAGE
