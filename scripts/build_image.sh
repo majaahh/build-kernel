@@ -32,7 +32,18 @@ BUILD_BOOT_IMAGE()
     local MKBOOTIMG="$SRC_DIR/external/mkbootimg/mkbootimg.py"
     local CMD
     local KERNEL="$BUILD_DIR/arch/arm64/boot/Image"
-    local RAMDISK="$SRC_DIR/prebuilts/boot/ramdisk"
+
+    LOG_STEP_IN "- Starting $IMAGE image build"
+
+    if [[ "$IMAGE" == "boot" ]]; then
+        if [[ ! -d "$TMP_DIR" ]]; then
+            EVAL "mkdir -p \"$TMP_DIR\""
+        fi
+
+        LOG_STEP_IN "- Building ramdisk binary"
+        BUILD_RAMDISK_BINARY "$TMP_DIR/ramdisk.lz4" || return 1
+        LOG_STEP_OUT
+    fi
 
     if [[ ! -f "$MKBOOTIMG" ]]; then
         LOG "- Fetching submodules"
@@ -52,7 +63,7 @@ BUILD_BOOT_IMAGE()
         SIZE="67108864"
         CMD+="--kernel \"$KERNEL\" "
         CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
-        CMD+="--ramdisk \"$RAMDISK\""
+        CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
         SIZE="33554432"
         CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
@@ -64,7 +75,6 @@ BUILD_BOOT_IMAGE()
         CMD+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
     fi
 
-    LOG_STEP_IN "- Building $IMAGE image"
     if [[ "$IMAGE" == "vendor_boot" ]]; then
         LOG_STEP_IN "- Generating modules"
         "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules" || return 1
@@ -102,6 +112,7 @@ BUILD_BOOT_IMAGE()
         EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\""
     fi
 
+    LOG_STEP_IN "- Creating $IMAGE image"
     EVAL "$CMD" || return 1
 
     if [[ "$IMAGE" == "vendor_boot" ]]; then
@@ -115,7 +126,7 @@ BUILD_BOOT_IMAGE()
     if [[ -d "$TMP_DIR" ]]; then
         EVAL "rm -rf \"$TMP_DIR\""
     fi
-    LOG_STEP_OUT
+    LOG_STEP_OUT; LOG_STEP_OUT
 }
 
 BUILD_DT_IMAGE()
@@ -145,22 +156,24 @@ BUILD_DT_IMAGE()
         SIZE="8388608"
     fi
 
-    CMD+="mkdtboimg cfg_create "
-    CMD+="\"$OUTPUT_DIR/$IMAGE.img\" "
-    CMD+="\"$SRC_DIR/configs/$CONFIGURATION.cfg\" "
-    CMD+="-d \"$DTS_DIR\""
-
     if [[ ! -f "$SRC_DIR/configs/$CONFIGURATION.cfg" ]] && [[ "$IMAGE" == "dtbo" ]]; then
         LOGE "$CONFIGURATION.cfg was not found"
         return 1
     fi
+
+    LOG_STEP_IN "- Starting $IMAGE image build"
+
+    CMD+="mkdtboimg cfg_create "
+    CMD+="\"$OUTPUT_DIR/$IMAGE.img\" "
+    CMD+="\"$SRC_DIR/configs/$CONFIGURATION.cfg\" "
+    CMD+="-d \"$DTS_DIR\""
 
     if [[ ! -d "$DTS_DIR" ]]; then
         LOGE "${DTS_DIR//$SRC_DIR\//} was not found"
         return 1
     fi
 
-    LOG_STEP_IN "- Building $IMAGE image"
+    LOG_STEP_IN "- Creating $IMAGE image"
     if [[ ! -d "$OUTPUT_DIR" ]]; then
         EVAL "mkdir -p \"$OUTPUT_DIR\"" || return 1
     fi
@@ -174,7 +187,40 @@ BUILD_DT_IMAGE()
     if ! $SKIP_AVB && [[ "$IMAGE" == "dtbo" ]]; then
         SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE" || return 1
     fi
-    LOG_STEP_OUT
+    LOG_STEP_OUT; LOG_STEP_OUT
+}
+
+BUILD_RAMDISK_BINARY()
+{
+    _CHECK_NON_EMPTY_PARAM "OUTPUT_FILE" "$1" || return 1
+
+    local OUTPUT_FILE="$1"
+    local DIRS=(
+        "debug_ramdisk" "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
+        "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
+        "first_stage_ramdisk/sys" "dev" "metadata" "mnt" "proc" "second_stage_resources" "sys" "system/etc/ramdisk"
+      )
+
+    if [[ -f "$OUTPUT_FILE" ]]; then
+        EVAL "rm -f \"$OUTPUT_FILE\"" || return 1
+    fi
+
+    if [[ -d "$TMP_DIR/ramdisk" ]]; then
+        EVAL "rm -rf \"$TMP_DIR/ramdisk\""
+    fi
+    EVAL "mkdir -p \"$TMP_DIR/ramdisk\"" || return 1
+
+    for i in "${DIRS[@]}"; do
+        EVAL "mkdir -p \"$TMP_DIR/ramdisk/$i\"" || return 1
+    done
+
+    LOG "- Adding init from prebuilts/ramdisk/init"
+    EVAL "cp -a \"$SRC_DIR/prebuilts/ramdisk/init\" \"$TMP_DIR/ramdisk/init\""
+
+    LOG "- Creating ramdisk binary"
+    EVAL "cd \"$TMP_DIR/ramdisk\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$OUTPUT_FILE\"" || return 1
+
+    EVAL "rm -rf \"$TMP_DIR/ramdisk\""
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/internal/build_flashable_zip.sh#L486-L511
