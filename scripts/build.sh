@@ -80,7 +80,7 @@ fi
 EVAL "mkdir -p \"$IMAGES_DIR/kernel\""
 
 for i in "boot" "vendor_boot"; do
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" -d "$DEVICE" || exit 1
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" || exit 1
 done
 
 LOG "- Creating Kernel TAR Archive"
