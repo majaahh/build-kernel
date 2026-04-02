@@ -1,3 +1,6 @@
 out/
 temp/
 tmp/
+
+*.img
+*.tar
