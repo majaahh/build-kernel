@@ -98,11 +98,6 @@ fi
 
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
     GET_AOSP_CLANG || exit 1
-else
-    if [[ ! -f "$TOOLCHAIN_DIR/bin/clang" ]]; then
-        EVAL "rm -rf \"$TOOLCHAIN_DIR\"" || exit 1
-        GET_AOSP_CLANG || exit 1
-    fi
 fi
 
 LOG_STEP_IN "- Generating configuration"

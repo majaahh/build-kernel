@@ -78,7 +78,10 @@ GET_AOSP_CLANG()
 
     LOG_STEP_IN "- Latest AOSP Clang is $CURRENT_CLANG"
     LOG "- Downloading AOSP Clang"
-    EVAL "wget -nv -O \"$CURRENT_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz\""
+    EVAL "wget -nv -O \"$CURRENT_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz\"" || {
+        EVAL "rm -rf \"$TOOLCHAIN_DIR\""
+        return 1
+    }
 
     LOG "- Extracting AOSP Clang"
     EVAL "tar -xf \"$CURRENT_CLANG.tar.gz\" -C \"$TOOLCHAIN_DIR\" && rm \"$CURRENT_CLANG.tar.gz\""
