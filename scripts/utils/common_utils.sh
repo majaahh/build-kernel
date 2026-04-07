@@ -30,6 +30,22 @@ _CHECK_NON_EMPTY_PARAM()
     fi
 }
 
+# https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/module_utils.sh#L79
+# DOWNLOAD_FILE "<url>" "<output path>"
+# Downloads the file from the provided URL and stores it in the desidered output path.
+DOWNLOAD_FILE()
+{
+    _CHECK_NON_EMPTY_PARAM "URL" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "OUTPUT" "$2" || return 1
+
+    local URL="$1"
+    local OUTPUT="$2"
+
+    mkdir -p "$(dirname "$OUTPUT")"
+    curl -L -# -o "$OUTPUT" "$URL"
+    return $?
+}
+
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/common_utils.sh#L485
 EVAL()
 {
