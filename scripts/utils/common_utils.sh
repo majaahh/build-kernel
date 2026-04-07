@@ -86,12 +86,10 @@ GET_AOSP_CLANG()
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
     local LATEST_AOSP_CLANG
 
-    EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
-
     LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
     LOG_STEP_IN "- Latest AOSP Clang is ${LATEST_AOSP_CLANG//clang-/}"
     LOG "- Downloading AOSP Clang"
-    EVAL "wget -nv -O \"$LATEST_AOSP_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz\"" || {
+    DOWNLOAD_FILE "$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz" "$LATEST_AOSP_CLANG.tar.gz" || {
         LOGE "Failed to download latest AOSP Clang"
         EVAL "rm -rf \"$TOOLCHAIN_DIR\""
         return 1
