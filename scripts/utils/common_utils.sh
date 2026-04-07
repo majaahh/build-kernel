@@ -42,7 +42,7 @@ DOWNLOAD_FILE()
     local OUTPUT="$2"
 
     EVAL "mkdir -p \"$(dirname "$OUTPUT")\""
-    curl -L -# -o "$OUTPUT" "$URL"
+    curl -L -o "$OUTPUT" "$URL"
     return $?
 }
 
