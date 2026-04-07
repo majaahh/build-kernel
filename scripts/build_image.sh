@@ -213,6 +213,10 @@ BUILD_RAMDISK_BINARY()
     fi
     EVAL "mkdir -p \"$TMP_DIR/ramdisk_build\"" || return 1
 
+    if [[ ! -d "$OUTPUT_DIR" ]]; then
+        EVAL "mkdir -p \"$OUTPUT_DIR\""
+    fi
+
     for i in "${DIRS[@]}"; do
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_build/$i\"" || return 1
     done
