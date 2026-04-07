@@ -67,29 +67,37 @@ CREATE_TAR_ARCHIVE()
 
 GET_AOSP_CLANG()
 {
-    local AOSP_LIST
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
-    local CURRENT_CLANG
+    local LATEST_AOSP_CLANG
 
     EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
 
-    AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
-    CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
-
-    LOG_STEP_IN "- Latest AOSP Clang is $CURRENT_CLANG"
+    LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
+    LOG_STEP_IN "- Latest AOSP Clang is ${LATEST_AOSP_CLANG//clang-/}"
     LOG "- Downloading AOSP Clang"
-    EVAL "wget -nv -O \"$CURRENT_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz\"" || {
+    EVAL "wget -nv -O \"$LATEST_AOSP_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz\"" || {
         LOGE "Failed to download latest AOSP Clang"
         EVAL "rm -rf \"$TOOLCHAIN_DIR\""
         return 1
     }
 
     LOG "- Extracting AOSP Clang"
-    EVAL "tar -xf \"$CURRENT_CLANG.tar.gz\" -C \"$TOOLCHAIN_DIR\" && rm \"$CURRENT_CLANG.tar.gz\""
+    EVAL "tar -xf \"$LATEST_AOSP_CLANG.tar.gz\" -C \"$TOOLCHAIN_DIR\" && rm \"$LATEST_AOSP_CLANG.tar.gz\""
 
     EVAL "touch \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\""
     EVAL "touch \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\""
     LOG_STEP_OUT
+}
+
+GET_LATEST_AOSP_CLANG()
+{
+    local AOSP_LIST
+    local CURRENT_CLANG
+
+    AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
+    CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
+
+    echo "$CURRENT_CLANG"
 }
 
 UPLOAD()
