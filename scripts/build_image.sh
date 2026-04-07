@@ -198,6 +198,9 @@ BUILD_DT_IMAGE()
 
 BUILD_RAMDISK_BINARY()
 {
+    _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$1" || return 1
+
+    local OUTPUT_DIR="$1"
     local DIRS=(
         "debug_ramdisk" "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
         "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
