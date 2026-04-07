@@ -69,6 +69,7 @@ GET_AOSP_CLANG()
 {
     local AOSP_LIST
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
+    local CURRENT_CLANG
 
     LOG_STEP_IN true "Downloading clang"
     EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
