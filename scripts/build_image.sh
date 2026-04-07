@@ -12,8 +12,9 @@ source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
 _PRINT_USAGE()
 {
-    echo "Usage: build_image.sh <image> <output_dir> [arguments]"
+    echo "Usage: build_image.sh <binary/image> <output_dir> [arguments]"
     echo "Images: boot, dtb, dtbo, vendor_boot"
+    echo "Binaries: ramdisk"
     echo "Arguments:"
     echo "-d,--device      Specify device codename (required for dtbo)"
     echo "-h,--help        Prints this help menu"
@@ -32,6 +33,11 @@ BUILD_BOOT_IMAGE()
     local MKBOOTIMG="$SRC_DIR/external/mkbootimg/mkbootimg.py"
     local CMD
     local KERNEL="$BUILD_DIR/arch/arm64/boot/Image"
+    local RAMDISK="ramdisk"
+
+    if ! $SKIP_LZ4; then
+        RAMDISK="ramdisk.lz4"
+    fi
 
     LOG_STEP_IN "- Starting $IMAGE image build"
 
@@ -41,7 +47,7 @@ BUILD_BOOT_IMAGE()
         fi
 
         LOG_STEP_IN "- Building ramdisk binary"
-        BUILD_RAMDISK_BINARY "$TMP_DIR/ramdisk.lz4" || return 1
+        BUILD_RAMDISK_BINARY "$TMP_DIR" || return 1
         LOG_STEP_OUT
     fi
 
@@ -63,7 +69,7 @@ BUILD_BOOT_IMAGE()
         SIZE="67108864"
         CMD+="--kernel \"$KERNEL\" "
         CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
-        CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
+        CMD+="--ramdisk \"$TMP_DIR/$RAMDISK\""
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
         SIZE="33554432"
         CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
@@ -192,35 +198,39 @@ BUILD_DT_IMAGE()
 
 BUILD_RAMDISK_BINARY()
 {
-    _CHECK_NON_EMPTY_PARAM "OUTPUT_FILE" "$1" || return 1
-
-    local OUTPUT_FILE="$1"
     local DIRS=(
         "debug_ramdisk" "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
         "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
         "first_stage_ramdisk/sys" "dev" "metadata" "mnt" "proc" "second_stage_resources" "sys" "system/etc/ramdisk"
       )
 
-    if [[ -f "$OUTPUT_FILE" ]]; then
-        EVAL "rm -f \"$OUTPUT_FILE\"" || return 1
+    if [[ -f "$OUTPUT_DIR/ramdisk" ]] || [[ -f "$OUTPUT_DIR/ramdisk.lz4" ]]; then
+        EVAL "find \"$OUTPUT_DIR\" -maxdepth 1 -name \"ramdisk*lz4\" -type f | rm -f" || return 1
     fi
 
-    if [[ -d "$TMP_DIR/ramdisk" ]]; then
-        EVAL "rm -rf \"$TMP_DIR/ramdisk\""
+    if [[ -d "$TMP_DIR/ramdisk_build" ]]; then
+        EVAL "rm -rf \"$TMP_DIR/ramdisk_build\""
     fi
-    EVAL "mkdir -p \"$TMP_DIR/ramdisk\"" || return 1
+    EVAL "mkdir -p \"$TMP_DIR/ramdisk_build\"" || return 1
 
     for i in "${DIRS[@]}"; do
-        EVAL "mkdir -p \"$TMP_DIR/ramdisk/$i\"" || return 1
+        EVAL "mkdir -p \"$TMP_DIR/ramdisk_build/$i\"" || return 1
     done
 
     LOG "- Adding init from prebuilts/ramdisk/init"
-    EVAL "cp -a \"$SRC_DIR/prebuilts/ramdisk/init\" \"$TMP_DIR/ramdisk/init\""
+    EVAL "cp -a \"$SRC_DIR/prebuilts/ramdisk/init\" \"$TMP_DIR/ramdisk_build/init\""
 
     LOG "- Creating ramdisk binary"
-    EVAL "cd \"$TMP_DIR/ramdisk\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$OUTPUT_FILE\"" || return 1
+    EVAL "cd \"$TMP_DIR/ramdisk_build\" && find . | cpio --quiet -o -H newc -R root:root > \"ramdisk\"" || return 1
+    EVAL "mv \"$TMP_DIR/ramdisk_build/ramdisk\" \"$OUTPUT_DIR/ramdisk\""
 
-    EVAL "rm -rf \"$TMP_DIR/ramdisk\""
+    EVAL "rm -rf \"$TMP_DIR/ramdisk_build\""
+
+    if ! $SKIP_LZ4; then
+        LOG "- Compressing ramdisk binary with lz4"
+        EVAL "lz4 -9cl \"$OUTPUT_DIR/ramdisk\" > \"$OUTPUT_DIR/ramdisk.lz4\""
+        EVAL "rm -f \"$OUTPUT_DIR/ramdisk\""
+    fi
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/internal/build_flashable_zip.sh#L486-L511
@@ -256,22 +266,29 @@ if [[ "$#" -lt "2" ]]; then
     exit 1
 fi
 
-IMAGE="$1"
+BINARY=""
+IMAGE=""
 OUTPUT_DIR="$2"
 DEVICE=""
 SKIP_AVB=false
 SKIP_LZ4=false
-
-shift 2
 # ]
 
-if [[ "$IMAGE" != "boot" ]] && [[ "$IMAGE" != "dtb" ]] && \
-    [[ "$IMAGE" != "dtbo" ]] && [[ "$IMAGE" != "vendor_boot" ]]; then
-    LOGE "$1 is not a valid image"
+if [[ "$1" != "boot" ]] && [[ "$1" != "dtb" ]] && \
+    [[ "$1" != "dtbo" ]] && [[ "$1" != "ramdisk" ]] && \
+    [[ "$1" != "vendor_boot" ]]; then
+    LOGE "$1 is not a valid binary or image"
     _PRINT_USAGE
     exit 1
 fi
 
+if [[ "$1" == "ramdisk" ]]; then
+    BINARY="$1"
+else
+    IMAGE="$1"
+fi
+
+shift 2
 while [[ "$1" == "-"* ]]; do
     if [[ "$1" == "-d" ]] || [[ "$1" == "--device" ]]; then
         if [[ -z "$2" ]] || [[ "$2" == "-"* ]]; then
@@ -293,6 +310,14 @@ while [[ "$1" == "-"* ]]; do
     shift
 done
 
+if [[ "$BINARY" == "ramdisk" ]]; then
+    if [[ ! -d "$OUTPUT_DIR" ]]; then
+        EVAL "mkdir -p \"$OUTPUT_DIR\"" || exit 1
+    fi
+    BUILD_RAMDISK_BINARY "$OUTPUT_DIR" || exit 1
+    exit 0
+fi
+
 if [[ "$IMAGE" == "dtb"* ]]; then
     BUILD_DT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
@@ -301,7 +326,7 @@ if [[ "$IMAGE" == *"boot" ]]; then
     BUILD_BOOT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
 
-if ! $SKIP_LZ4; then
+if ! $SKIP_LZ4 && [[ -z "$BINARY" ]]; then
     LOG_STEP_IN
 
     if [[ -f "$OUTPUT_DIR/$IMAGE.img.lz4" ]]; then
