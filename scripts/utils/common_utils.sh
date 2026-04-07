@@ -91,14 +91,14 @@ GET_AOSP_CLANG()
     CLANG_URL="$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz"
     LOG_STEP_IN "- Latest AOSP Clang is ${LATEST_AOSP_CLANG//clang-/}"
     LOG "- Downloading AOSP Clang"
-    DOWNLOAD_FILE "$CLANG_URL" "$LATEST_AOSP_CLANG.tar.gz" || {
+    DOWNLOAD_FILE "$CLANG_URL" "$(basename "$CLANG_URL")" || {
         LOGE "Failed to download latest AOSP Clang"
         EVAL "rm -rf \"$TOOLCHAIN_DIR\""
         return 1
     }
 
     LOG "- Extracting AOSP Clang"
-    EVAL "tar -xf \"$LATEST_AOSP_CLANG.tar.gz\" -C \"$TOOLCHAIN_DIR\" && rm \"$LATEST_AOSP_CLANG.tar.gz\""
+    EVAL "tar -xf \"$(basename "$CLANG_URL")\" -C \"$TOOLCHAIN_DIR\" && rm \"$(basename "$CLANG_URL")\""
 
     EVAL "touch \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\""
     EVAL "touch \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\""
