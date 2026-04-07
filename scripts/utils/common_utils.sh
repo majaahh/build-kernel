@@ -71,13 +71,12 @@ GET_AOSP_CLANG()
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
     local CURRENT_CLANG
 
-    LOG_STEP_IN true "Downloading clang"
     EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
 
     AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
     CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
 
-    LOG "- Latest AOSP Clang is $CURRENT_CLANG"
+    LOG_STEP_IN "- Latest AOSP Clang is $CURRENT_CLANG"
     LOG "- Downloading AOSP Clang"
     EVAL "wget -nv -O \"$CURRENT_CLANG.tar.gz\" \"$AOSP_ARCHIVE/$CURRENT_CLANG.tar.gz\""
 
@@ -86,7 +85,6 @@ GET_AOSP_CLANG()
 
     EVAL "touch \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\""
     EVAL "touch \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\""
-
     LOG_STEP_OUT
 }
 
