@@ -98,6 +98,7 @@ GET_AOSP_CLANG()
     LOG "- Downloading AOSP Clang"
     DOWNLOAD_FILE "$CLANG_URL" "$TMP_DIR/$(basename "$CLANG_URL")" || {
         LOGE "Failed to download latest AOSP Clang"
+        EVAL "rm -rf \"$TMP_DIR\""
         EVAL "rm -rf \"$TOOLCHAIN_DIR\""
         return 1
     }
