@@ -320,9 +320,7 @@ fi
 
 if [[ "$IMAGE" == "dtb"* ]]; then
     BUILD_DT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
-fi
-
-if [[ "$IMAGE" == *"boot" ]]; then
+elif [[ "$IMAGE" == *"boot" ]]; then
     BUILD_BOOT_IMAGE "$IMAGE" "$OUTPUT_DIR" || exit 1
 fi
 
