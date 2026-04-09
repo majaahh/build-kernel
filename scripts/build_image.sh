@@ -160,7 +160,7 @@ BUILD_DT_IMAGE()
         local SIZE
 
         CONFIGURATION="$DEVICE"
-        DTS_DIR+="/samsung/$(echo "$DEVICE" | cut -d"_" -f1)"
+        DTS_DIR+="/device/$(echo "$DEVICE" | cut -d"_" -f1)"
         SIZE="8388608"
     fi
 

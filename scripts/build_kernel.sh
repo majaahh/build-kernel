@@ -57,25 +57,6 @@ if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
-    LOG_STEP_IN "- Setting up kernel source"
-
-    if [[ ! -d "$KERNEL_DIR" ]]; then
-        LOG "- Cloning kernel source"
-        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/majaahh/android_kernel_samsung_a53x.git\" \"$KERNEL_DIR\""
-    fi
-
-    LOG "- Fetching submodules"
-    EVAL "cd \"$KERNEL_DIR\" && git submodule update --init -f --checkout"
-
-    LOG_STEP_OUT
-fi
-
-if ! $REGENERATE && [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]]; then
-    LOGE "Configuration fragment for $DEVICE was not found"
-    exit 1
-fi
-
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
     GET_AOSP_CLANG || exit 1
 else
