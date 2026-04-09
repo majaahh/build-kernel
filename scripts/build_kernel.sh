@@ -99,7 +99,7 @@ fi
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
     GET_AOSP_CLANG || exit 1
 else
-    if [[ "${LATEST_AOSP_CLANG//clang-/}" != "$(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO")" ]]; then
+    if [[ "$(GET_LATEST_AOSP_CLANG | sed "s/clang-//g")" != "$(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO")" ]]; then
         LOG "\033[0;33m! Newer AOSP Clang is available ($(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO") -> ${LATEST_AOSP_CLANG//clang-/})\033[0m"
     fi
 fi
