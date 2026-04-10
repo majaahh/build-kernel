@@ -7,7 +7,7 @@
 # [
 _PRINT_USAGE()
 {
-    echo "Usage: build.sh [arguments] <device>"
+    echo "Usage: build.sh <device> [arguments]"
     echo "Arguments:"
     echo "-f,--flash       Flashes latest build"
     echo "-h,--help        Prints this help menu"
@@ -21,40 +21,38 @@ source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
 # shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
-KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x"
-DTBO_TAR_NAME="UN1CA_DTBO-$(date +%Y%m%d-%H%M)-a53x"
+DEVICE="$1"
+KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-$DEVICE"
+DTBO_TAR_NAME="UN1CA_DTBO-$(date +%Y%m%d-%H%M)-$DEVICE"
 FLASH=false
 UPLOAD=false
-DEVICE=""
 POST=false
 BUILD_KERNEL_ARGS=""
 # ]
 
-while [[ "$1" == "-"* ]]; do
-    if [[ "$1" == "-f" ]] || [[ "$1" == "--flash" ]]; then
+while [[ "$2" == "-"* ]]; do
+    if [[ "$2" == "-f" ]] || [[ "$2" == "--flash" ]]; then
         FLASH=true
         POST=true
-    elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    elif [[ "$2" == "-h" ]] || [[ "$2" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
-    elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
+    elif [[ "$2" == "-k" ]] || [[ "$2" == "--ksu" ]]; then
         BUILD_KERNEL_ARGS+="-k "
-        KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-KernelSU-a53x"
-    elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
+        KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-KernelSU-$DEVICE"
+    elif [[ "$2" == "-r" ]] || [[ "$2" == "--regenerate" ]]; then
         BUILD_KERNEL_ARGS+="-r "
-    elif [[ "$1" == "-u" ]] || [[ "$1" == "--upload" ]]; then
+    elif [[ "$2" == "-u" ]] || [[ "$2" == "--upload" ]]; then
         UPLOAD=true
         POST=true
     else
-        LOGE "Unknown option: $1"
+        LOGE "Unknown option: $2"
         _PRINT_USAGE
         exit 1
     fi
 
     shift
 done
-
-DEVICE="$1"
 
 if [[ "$BUILD_KERNEL_ARGS" != *"-r"* ]] && [[ -z "$DEVICE" ]]; then
     LOGE "No device specified"
