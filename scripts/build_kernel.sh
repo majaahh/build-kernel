@@ -21,29 +21,6 @@ _PRINT_USAGE()
     echo "-r,--regenerate  Regenerates the defconfig"
 }
 
-BUILD_KERNEL()
-{
-    local CMD
-    local EXTRA_CMD="$1"
-
-    CMD+="make "
-    CMD+="-C \"$KERNEL_DIR\" "
-    CMD+="-j\"$(nproc --all)\" "
-    CMD+="ARCH=\"arm64\" "
-    CMD+="CC=\"clang\" "
-    CMD+="KBUILD_BUILD_USER=\"Majaahh\" "
-    CMD+="KBUILD_BUILD_HOST=\"PC\" "
-    CMD+="LLVM=1 "
-    CMD+="LLVM_IAS=1 "
-    CMD+="O=\"$BUILD_DIR\" "
-    if [[ -n "$EXTRA_CMD" ]]; then
-        CMD+="$1 "
-    fi
-    CMD+="> /dev/null"
-
-    EVAL "$CMD" || return 1
-}
-
 DEVICE=""
 KSU=false
 REGENERATE=false

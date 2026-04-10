@@ -30,6 +30,29 @@ _CHECK_NON_EMPTY_PARAM()
     fi
 }
 
+BUILD_KERNEL()
+{
+    local CMD
+    local EXTRA_CMD="$1"
+
+    CMD+="make "
+    CMD+="-C \"$KERNEL_DIR\" "
+    CMD+="-j\"$(nproc --all)\" "
+    CMD+="ARCH=\"arm64\" "
+    CMD+="CC=\"clang\" "
+    CMD+="KBUILD_BUILD_USER=\"Majaahh\" "
+    CMD+="KBUILD_BUILD_HOST=\"PC\" "
+    CMD+="LLVM=1 "
+    CMD+="LLVM_IAS=1 "
+    CMD+="O=\"$BUILD_DIR\" "
+    if [[ -n "$EXTRA_CMD" ]]; then
+        CMD+="$1 "
+    fi
+    CMD+="> /dev/null"
+
+    EVAL "$CMD" || return 1
+}
+
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/module_utils.sh#L79
 # DOWNLOAD_FILE "<url>" "<output path>"
 # Downloads the file from the provided URL and stores it in the desidered output path.
