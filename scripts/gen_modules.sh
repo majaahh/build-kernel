@@ -42,14 +42,9 @@ if [[ -d "$MODULES_INSTALL_DIR" ]]; then
 fi
 EVAL "mkdir -p \"$MODULES_INSTALL_DIR\""
 
-(
-cd "$KERNEL_DIR"
-
 LOG "- Installing modules"
-EVAL "make -j\"$(nproc --all)\" O=\"$BUILD_DIR\" CC=\"clang\" \
-    INSTALL_MOD_STRIP=\"--strip-debug --keep-section=.ARM.attributes\" \
-    INSTALL_MOD_PATH=\"$MODULES_INSTALL_DIR\" \"modules_install\" >/dev/null" || exit 1
-) || exit 1
+BUILD_KERNEL "INSTALL_MOD_STRIP=\"--strip-debug --keep-section=.ARM.attributes\" \
+    INSTALL_MOD_PATH=\"$MODULES_INSTALL_DIR\" modules_install"
 
 KMODULES_DIR="$(find "$MODULES_INSTALL_DIR/lib/modules" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
 MODULES_ORDER="$KMODULES_DIR/modules.order"
