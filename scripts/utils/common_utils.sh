@@ -33,7 +33,6 @@ _CHECK_NON_EMPTY_PARAM()
 BUILD_KERNEL()
 {
     local CMD
-    local EXTRA_CMD="$1"
 
     CMD+="make "
     CMD+="-C \"$KERNEL_DIR\" "
@@ -45,7 +44,7 @@ BUILD_KERNEL()
     CMD+="LLVM=1 "
     CMD+="LLVM_IAS=1 "
     CMD+="O=\"$BUILD_DIR\" "
-    if [[ -n "$EXTRA_CMD" ]]; then
+    if [[ -n "$1" ]]; then
         CMD+="$1 "
     fi
     CMD+="> /dev/null"
