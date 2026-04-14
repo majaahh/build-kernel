@@ -97,9 +97,17 @@ BUILD_BOOT_IMAGE()
         fi
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform\""
 
-        EVAL "cp -rf \"$SRC_DIR/prebuilts/vboot_platform/\"* \"$TMP_DIR/ramdisk_platform\""
+        LOG "- Copying prebuilts/vboot_platform/fstab.s5e8825 to ramdisk_platform/fstab.s5e8825"
+        EVAL "cp -rf \"$SRC_DIR/prebuilts/vboot_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform\""
+
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk\""
+        LOG "- Copying prebuilts/vboot_platform/fstab.s5e8825 to ramdisk_platform/first_stage_ramdisk/fstab.s5e8825"
         EVAL "cp -f \"$TMP_DIR/ramdisk_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk/fstab.s5e8825\""
+
+        EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
+        LOG "- Copying touch firmware for $DEVICE from prebuilts/vboot_platform/vendor/firmware to ramdisk_platform/vendor/firmware"
+        EVAL "cp -a \"$(find "$SRC_DIR/prebuilts/vboot_platform/vendor/firmware" -type f -name "*$DEVICE.bin")\" \
+            \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
 
         EVAL "cd \"$TMP_DIR/ramdisk_platform\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
 
@@ -145,12 +153,6 @@ BUILD_DT_IMAGE()
     local CONFIGURATION
     local CMD
     local DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
-
-    if [[ -z "$DEVICE" ]] && [[ "$IMAGE" == "dtbo" ]]; then
-        LOGE "Device must be set for dtbo build"
-        _PRINT_USAGE
-        return 1
-    fi
 
     if [[ "$IMAGE" == "dtb" ]]; then
         CONFIGURATION="s5e8825"
@@ -316,6 +318,14 @@ while [[ "$1" == "-"* ]]; do
 
     shift
 done
+
+if [[ -z "$DEVICE" ]]; then
+    if [[ "$IMAGE" == "dtbo" ]] || [[ "$IMAGE" == "vendor_boot" ]]; then
+        LOGE "Device must be set for $IMAGE build"
+        _PRINT_USAGE
+        exit 1
+    fi
+fi
 
 if [[ "$BINARY" == "ramdisk" ]]; then
     if [[ ! -d "$OUTPUT_DIR" ]]; then
