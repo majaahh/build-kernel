@@ -21,13 +21,13 @@ source "$SRC_DIR/scripts/utils/common_utils.sh" || exit 1
 # shellcheck disable=SC1091
 source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 
-KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-a53x"
-DTBO_TAR_NAME="UN1CA_DTBO-$(date +%Y%m%d-%H%M)-a53x"
 FLASH=false
 UPLOAD=false
+KSU=false
 DEVICE=""
 POST=false
 BUILD_KERNEL_ARGS=""
+DATE="$(date +%Y%m%d-%H%M)"
 # ]
 
 while [[ "$1" == "-"* ]]; do
@@ -38,8 +38,7 @@ while [[ "$1" == "-"* ]]; do
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
-        BUILD_KERNEL_ARGS+="-k "
-        KERNEL_TAR_NAME="UN1CA_Kernel-$(date +%Y%m%d-%H%M)-KernelSU-a53x"
+        KSU=true
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         BUILD_KERNEL_ARGS+="-r "
     elif [[ "$1" == "-u" ]] || [[ "$1" == "--upload" ]]; then
@@ -63,6 +62,14 @@ if [[ "$BUILD_KERNEL_ARGS" != *"-r"* ]] && [[ -z "$DEVICE" ]]; then
 elif [[ -n "$DEVICE" ]]; then
     BUILD_KERNEL_ARGS+="-d $DEVICE"
 fi
+
+SUFFIX="$DEVICE"
+if $KSU; then
+    SUFFIX="KernelSU-$DEVICE"
+fi
+
+KERNEL_TAR_NAME="UN1CA_Kernel-$DATE-$SUFFIX"
+DTBO_TAR_NAME="UN1CA_DTBO-$DATE-$SUFFIX"
 
 LOG_STEP_IN true "Building kernel"
 # shellcheck disable=SC2086
