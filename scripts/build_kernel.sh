@@ -58,7 +58,7 @@ if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
 fi
 
 if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
-    LOG_STEP_IN true "Setting up kernel source"
+    LOG_STEP_IN "- Setting up kernel source"
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
         LOG "- Cloning kernel source"
