@@ -106,7 +106,7 @@ BUILD_BOOT_IMAGE()
 
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
         LOG "- Copying touch firmware for $DEVICE from prebuilts/vboot_platform/vendor/firmware to ramdisk_platform/vendor/firmware"
-        EVAL "cp -a \"$(find "$SRC_DIR/prebuilts/vboot_platform/vendor/firmware" -type f -name "*$DEVICE.bin")\" \
+        EVAL "cp -a \"$(find "$SRC_DIR/prebuilts/vboot_platform/vendor/firmware" -type f -name "*$DEVICE*.bin")\" \
             \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
 
         EVAL "cd \"$TMP_DIR/ramdisk_platform\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
