@@ -105,7 +105,7 @@ if [[ "$DEVICE" == "a53x" ]]; then
         CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME$i.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
     done
 else
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
+    "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
     LOG "- Creating dtbo TAR Archive"
     CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
 fi
