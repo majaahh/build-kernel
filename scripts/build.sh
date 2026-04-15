@@ -69,7 +69,7 @@ if $KSU; then
 fi
 
 KERNEL_TAR_NAME="UN1CA_Kernel-$DATE-$SUFFIX"
-DTBO_TAR_NAME="UN1CA_DTBO-$DATE-$SUFFIX"
+DTBO_TAR_NAME="UN1CA_DTBO-$DATE-$DEVICE"
 
 LOG_STEP_IN true "Building kernel"
 # shellcheck disable=SC2086
