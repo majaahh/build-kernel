@@ -152,15 +152,16 @@ BUILD_DT_IMAGE()
     local OUTPUT_DIR="$2"
     local CONFIGURATION
     local CMD
-    local DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
+    local DTS_DIR
 
     if [[ "$IMAGE" == "dtb" ]]; then
         CONFIGURATION="s5e8825"
+        DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
     elif [[ "$IMAGE" == "dtbo" ]]; then
         local SIZE
 
         CONFIGURATION="$DEVICE"
-        DTS_DIR+="/samsung/$(echo "$DEVICE" | cut -d"_" -f1)"
+        DTS_DIR="$(find "$BUILD_DIR/arch/arm64/boot/dts" -type d -name "$DEVICE" | tail -n 1)"
         SIZE="8388608"
     fi
 
