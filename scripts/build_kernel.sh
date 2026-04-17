@@ -57,7 +57,7 @@ if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
+if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN "- Setting up kernel source"
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
@@ -65,8 +65,10 @@ if [[ ! -d "$KERNEL_DIR" ]] || [[ ! -d "$KERNEL_DIR/drivers/kernelsu" ]]; then
         EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/majaahh/android_kernel_samsung_a53x.git\" \"$KERNEL_DIR\""
     fi
 
-    LOG "- Fetching submodules"
-    EVAL "cd \"$KERNEL_DIR\" && git submodule update --init -f --checkout"
+    if [[ -f "$KERNEL_DIR/.gitmodules" ]]; then
+        LOG "- Fetching submodules"
+        EVAL "cd \"$KERNEL_DIR\" && git submodule update --init -f --checkout"
+    fi
 
     LOG_STEP_OUT
 fi
