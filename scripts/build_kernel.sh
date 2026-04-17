@@ -103,7 +103,7 @@ if $KSU; then
 fi
 
 LOG "- Setting local version"
-EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
+EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
 LOG_STEP_OUT
 LOG "- Building dtbs"
 BUILD_KERNEL "dtbs"
