@@ -13,6 +13,7 @@ _PRINT_USAGE()
     echo "-h,--help        Prints this help menu"
     echo "-k,--ksu         Makes a KernelSU Build"
     echo "-r,--regenerate  Regenerates the defconfig"
+    echo "--skip-dtbo      Skips DTBO build"
     echo "-u,--upload      Creates a release on GitHub"
 }
 
@@ -26,6 +27,7 @@ UPLOAD=false
 KSU=false
 DEVICE=""
 POST=false
+SKIP_DTBO=false
 BUILD_KERNEL_ARGS=""
 DATE="$(date +%Y%m%d-%H%M)"
 # ]
@@ -41,6 +43,8 @@ while [[ "$1" == "-"* ]]; do
         KSU=true
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         BUILD_KERNEL_ARGS+="-r "
+    elif [[ "$1" == "--skip-dtbo" ]]; then
+        SKIP_DTBO=true
     elif [[ "$1" == "-u" ]] || [[ "$1" == "--upload" ]]; then
         UPLOAD=true
         POST=true
@@ -98,23 +102,25 @@ done
 LOG "- Creating Kernel TAR Archive"
 CREATE_TAR_ARCHIVE "$OUT/$KERNEL_TAR_NAME.tar" "$IMAGES_DIR/kernel/boot.img.lz4" "$IMAGES_DIR/kernel/vendor_boot.img.lz4" || exit 1
 
-if [[ -d "$IMAGES_DIR/dtbo" ]]; then
-    EVAL "rm -rf \"$IMAGES_DIR/dtbo\""
-fi
-EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
+if ! $SKIP_DTBO; then
+    if [[ -d "$IMAGES_DIR/dtbo" ]]; then
+        EVAL "rm -rf \"$IMAGES_DIR/dtbo\""
+    fi
+    EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
 
-if [[ "$DEVICE" == "a53x" ]]; then
-    for i in "" "_jpn"; do
-        "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "${DEVICE}${i}" || exit 1
+    if [[ "$DEVICE" == "a53x" ]]; then
+        for i in "" "_jpn"; do
+            "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "${DEVICE}${i}" || exit 1
+            LOG "- Creating dtbo TAR Archive"
+            CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME$i.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
+        done
+    else
+        "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
         LOG "- Creating dtbo TAR Archive"
-        CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME$i.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
-    done
-else
-    "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
-    LOG "- Creating dtbo TAR Archive"
-    CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
+        CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
+    fi
+    LOG_STEP_OUT
 fi
-LOG_STEP_OUT
 
 if $POST; then
     LOG_STEP_IN true "Running post-build scripts"
@@ -130,9 +136,11 @@ if $UPLOAD; then
     cd "$KERNEL_DIR"
 
     UPLOAD "$OUT/$KERNEL_TAR_NAME.tar" || exit 1
-    UPLOAD "$OUT/$DTBO_TAR_NAME.tar" || exit 1
-    if [[ "$DEVICE" == "a53x" ]]; then
-        UPLOAD "$OUT/${DTBO_TAR_NAME}_jpn.tar" || exit 1
+    if ! $SKIP_DTBO; then
+        UPLOAD "$OUT/$DTBO_TAR_NAME.tar" || exit 1
+        if [[ "$DEVICE" == "a53x" ]]; then
+            UPLOAD "$OUT/${DTBO_TAR_NAME}_jpn.tar" || exit 1
+        fi
     fi
     ) || exit 1
 fi
