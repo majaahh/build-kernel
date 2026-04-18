@@ -161,7 +161,7 @@ BUILD_DT_IMAGE()
         local SIZE
 
         CONFIGURATION="$DEVICE"
-        DTS_DIR="$(find "$BUILD_DIR/arch/arm64/boot/dts" -type d -name "$DEVICE" | tail -n 1)"
+        DTS_DIR="$(find "$BUILD_DIR/arch/arm64/boot/dts" -type d -name "$(echo "$DEVICE" | cut -d"_" -f1)" | tail -n 1)"
         SIZE="8388608"
     fi
 
@@ -177,8 +177,8 @@ BUILD_DT_IMAGE()
     CMD+="\"$SRC_DIR/configs/$CONFIGURATION.cfg\" "
     CMD+="-d \"$DTS_DIR\""
 
-    if [[ ! -d "$DTS_DIR" ]]; then
-        LOGE "${DTS_DIR//$SRC_DIR\//} was not found"
+    if [[ -z "$DTS_DIR" ]] || [[ ! -d "$DTS_DIR" ]]; then
+        LOGE "Dts directory was not found"
         return 1
     fi
 
