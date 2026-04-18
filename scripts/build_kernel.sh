@@ -104,7 +104,7 @@ if $KSU; then
     BUILD_KERNEL "ksu.config"
 fi
 
-LOG "- Setting local version"
+LOG "- Generating local version"
 EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
 LOG_STEP_OUT
 LOG "- Building dtbs"
