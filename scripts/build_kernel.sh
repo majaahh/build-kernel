@@ -62,7 +62,7 @@ if [[ ! -d "$KERNEL_DIR" ]]; then
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
         LOG "- Cloning kernel source"
-        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/majaahh/android_kernel_samsung_a53x.git\" \"$KERNEL_DIR\""
+        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/UN1CA/kernel_samsung_s5e8825.git\" \"$KERNEL_DIR\""
     fi
 
     if [[ -f "$KERNEL_DIR/.gitmodules" ]]; then
