@@ -104,8 +104,10 @@ if $KSU; then
     BUILD_KERNEL "ksu.config"
 fi
 
-LOG "- Generating local version"
-EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
+if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOCALVERSION_AUTO")" == "n" ]]; then
+    LOG "- Generating local version"
+    EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
+fi
 LOG_STEP_OUT
 LOG "- Building dtbs"
 BUILD_KERNEL "dtbs"

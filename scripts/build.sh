@@ -76,6 +76,11 @@ LOG_STEP_IN true "Building kernel"
 "$SRC_DIR/scripts/build_kernel.sh" $BUILD_KERNEL_ARGS || exit 1
 LOG_STEP_OUT
 
+if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOCALVERSION_AUTO")" == "y" ]]; then
+    KERNEL_TAR_NAME="${KERNEL_TAR_NAME#UN1CA_}"
+    DTBO_TAR_NAME="${DTBO_TAR_NAME#UN1CA_}"
+fi
+
 if [[ "$BUILD_KERNEL_ARGS" == *"-r"* ]]; then
     exit 0
 fi
