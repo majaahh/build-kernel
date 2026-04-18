@@ -159,6 +159,7 @@ UPLOAD()
     local ARCHIVE_NAME
     local TAG_NAME
     local REPO="majaahh/android_kernel_samsung_a53x"
+    local FORCE="${3:-}"
 
     ARCHIVE_NAME="$(basename "$ARCHIVE")"
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
@@ -174,20 +175,38 @@ UPLOAD()
         EVAL "gh release create \"$TAG_NAME\" --title \"$TAG_NAME\""
     fi
 
-    if [[ "$ARCHIVE_NAME" == UN1CA_Dtbo-* ]]; then
-        local VARIANT="${ARCHIVE_NAME##*-}"
-        local VARIANT="${VARIANT%.tar}"
+    if [[ "$FORCE" != "-f" ]]; then
+        if [[ "$ARCHIVE_NAME" == UN1CA_Kernel-* ]]; then
+            local VARIANT="${ARCHIVE_NAME##*-}"
+            local VARIANT="${VARIANT%.tar}"
 
-        # shellcheck disable=SC2269
-        VARIANT="$VARIANT" \
-        gh release view "$TAG_NAME" --repo "$REPO" --json assets \
-            --jq "
-                .assets[].name
-                | select(
-                    startswith(\"UN1CA_Dtbo-\")
-                    and endswith(env.VARIANT + \".tar\")
-                )
-            " | grep -q . && return 0
+            # shellcheck disable=SC2269
+            VARIANT="$VARIANT" \
+            gh release view "$TAG_NAME" --repo "$REPO" --json assets \
+                --jq "
+                    .assets[].name
+                    | select(
+                        startswith(\"UN1CA_Kernel-\")
+                        and endswith(env.VARIANT + \".tar\")
+                    )
+                " | grep -q . && return 0
+        fi
+
+        if [[ "$ARCHIVE_NAME" == UN1CA_DTBO-* ]]; then
+            local VARIANT="${ARCHIVE_NAME##*-}"
+            local VARIANT="${VARIANT%.tar}"
+
+            # shellcheck disable=SC2269
+            VARIANT="$VARIANT" \
+            gh release view "$TAG_NAME" --repo "$REPO" --json assets \
+                --jq "
+                    .assets[].name
+                    | select(
+                        startswith(\"UN1CA_DTBO-\")
+                        and endswith(env.VARIANT + \".tar\")
+                    )
+                " | grep -q . && return 0
+        fi
     fi
 
     LOG "- Uploading ${ARCHIVE//$SRC_DIR\//}"
