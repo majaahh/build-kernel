@@ -158,11 +158,12 @@ UPLOAD()
     local ARCHIVE="$1"
     local ARCHIVE_NAME
     local TAG_NAME
-    local REPO="majaahh/android_kernel_samsung_a53x"
+    local REPO
     local FORCE="${3:-}"
 
     ARCHIVE_NAME="$(basename "$ARCHIVE")"
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
+    REPO="$(git -C "$KERNEL_DIR" remote get-url origin | sed -Ee 's#.*/([^/]+/[^/]+)(\.git)?$#\1#' -e 's/^[^:]*://' -e 's/\.git//')"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
         LOG "- Creating tag"
