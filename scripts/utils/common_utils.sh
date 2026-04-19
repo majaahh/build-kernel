@@ -108,8 +108,21 @@ GET_AOSP_CLANG()
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
     local CLANG_URL
     local LATEST_AOSP_CLANG
+    local ATTEMPT=0
 
-    LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
+    until [[ -n "$LATEST_AOSP_CLANG" ]]; do
+        LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
+        if [[ -z "$LATEST_AOSP_CLANG" ]]; then
+            ATTEMPT=$((ATTEMPT + 1))
+            if [[ "$ATTEMPT" -ge 5 ]]; then
+                LOGE "Failed to fetch latest AOSP Clang version (5/5)"
+                return 1
+            fi
+            LOG "\033[0;33m! Failed to fetch latest AOSP Clang version ($ATTEMPT/5)\033[0m"
+            sleep 5
+        fi
+    done
+
     CLANG_URL="$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz"
 
     if [[ -d "$TMP_DIR" ]]; then
