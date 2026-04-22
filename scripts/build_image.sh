@@ -100,10 +100,6 @@ BUILD_BOOT_IMAGE()
         LOG "- Copying prebuilts/vboot_platform/fstab.s5e8825 to ramdisk_platform/fstab.s5e8825"
         EVAL "cp -rf \"$SRC_DIR/prebuilts/vboot_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform\""
 
-        EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk\""
-        LOG "- Copying prebuilts/vboot_platform/fstab.s5e8825 to ramdisk_platform/first_stage_ramdisk/fstab.s5e8825"
-        EVAL "cp -f \"$TMP_DIR/ramdisk_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform/first_stage_ramdisk/fstab.s5e8825\""
-
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
         LOG "- Copying touch firmware for $DEVICE from prebuilts/vboot_platform/vendor/firmware to ramdisk_platform/vendor/firmware"
         EVAL "find \"$SRC_DIR/prebuilts/vboot_platform/vendor/firmware\" -type f -name \"*$DEVICE*.bin\" -exec \
