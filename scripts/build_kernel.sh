@@ -13,7 +13,6 @@ source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 _PRINT_USAGE()
 {
     echo "Usage: build_kernel.sh <arguments>"
-    echo "Images: boot, dtb, dtbo, vendor_boot"
     echo "Arguments:"
     echo "-d,--device      Specify device codename"
     echo "-h,--help        Prints this help menu"
