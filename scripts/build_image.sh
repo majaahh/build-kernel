@@ -158,6 +158,7 @@ BUILD_DT_IMAGE()
 
         CONFIGURATION="$DEVICE"
         DTS_DIR="$(find "$BUILD_DIR/arch/arm64/boot/dts" -type d -name "$(echo "$DEVICE" | cut -d"_" -f1)" | tail -n 1)"
+        DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/samsung/a53x"
         SIZE="8388608"
     fi
 
