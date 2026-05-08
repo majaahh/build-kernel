@@ -30,8 +30,8 @@ if [[ "$#" -lt "2" ]]; then
     exit 1
 fi
 
-if ! type odin4 &>/dev/null; then
-    LOGE "Odin4 was not found. Please download and add it to your path!"
+if ! type brokkr &>/dev/null; then
+    LOGE "Brokkr was not found. Please download and add it to your path!"
     exit 1
 fi
 
@@ -65,4 +65,4 @@ while true; do
     sleep 0.5
 done
 
-EVAL "odin4 \"$PART\" \"$FILE\""
+EVAL "brokkr \"$PART\" \"$FILE\""
