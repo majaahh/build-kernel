@@ -108,21 +108,9 @@ GET_AOSP_CLANG()
     local AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
     local CLANG_URL
     local LATEST_AOSP_CLANG
-    local ATTEMPT=0
 
-    until [[ -n "$LATEST_AOSP_CLANG" ]]; do
-        LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
-        if [[ -z "$LATEST_AOSP_CLANG" ]]; then
-            ATTEMPT=$((ATTEMPT + 1))
-            if [[ "$ATTEMPT" -ge 5 ]]; then
-                LOGE "Failed to fetch latest AOSP Clang version (5/5)"
-                return 1
-            fi
-            LOG "\033[0;33m! Failed to fetch latest AOSP Clang version ($ATTEMPT/5)\033[0m"
-            sleep 5
-        fi
-    done
-
+    # shellcheck disable=SC2119
+    LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
     CLANG_URL="$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz"
 
     if [[ -d "$TMP_DIR" ]]; then
@@ -145,7 +133,6 @@ GET_AOSP_CLANG()
 
     LOG "- Extracting AOSP Clang"
     EVAL "tar -xf \"$TMP_DIR/$(basename "$CLANG_URL")\" -C \"$TOOLCHAIN_DIR\" && rm \"$TMP_DIR/$(basename "$CLANG_URL")\""
-
     EVAL "touch \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\""
     EVAL "touch \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\""
 
@@ -153,13 +140,41 @@ GET_AOSP_CLANG()
     LOG_STEP_OUT
 }
 
+# shellcheck disable=SC2120
 GET_LATEST_AOSP_CLANG()
 {
     local AOSP_LIST
     local CURRENT_CLANG
+    local ATTEMPT=0
+    local CURRENT_TAG
 
-    AOSP_LIST="$(curl -s https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source)"
+    until [[ -n "$AOSP_LIST" ]]; do
+        AOSP_LIST="$(curl -s "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source")"
+        if [[ -z "$AOSP_LIST" ]]; then
+            ATTEMPT=$((ATTEMPT + 1))
+            if [[ "$ATTEMPT" -ge 5 ]]; then
+                LOGE "Failed to fetch AOSP Clang list (5/5)"
+                return 1
+            fi
+            LOG "\033[0;33m! Failed to fetch AOSP Clang list ($ATTEMPT/5)\033[0m"
+            sleep 5
+        fi
+    done
+
     CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
+
+    if [[ "$1" == "--compare" ]]; then
+        if [[ -d "$TOOLCHAIN_DIR" ]]; then
+            CURRENT_TAG="$(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO")"
+
+            if [[ "${CURRENT_CLANG//clang-/}" != "$CURRENT_TAG" ]]; then
+                LOG "\033[0;33m! Newer AOSP Clang is available ($CURRENT_TAG -> ${CURRENT_CLANG//clang-/})\033[0m"
+            fi
+        else
+            LOGW "Toolchain dir does not exist"
+        fi
+        return 0
+    fi
 
     echo "$CURRENT_CLANG"
 }

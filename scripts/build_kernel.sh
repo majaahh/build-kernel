@@ -78,13 +78,10 @@ if ! $REGENERATE && [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]]; 
 fi
 
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
+    # shellcheck disable=SC2119
     GET_AOSP_CLANG || exit 1
 else
-    if [[ -n "$(GET_LATEST_AOSP_CLANG)" ]] && [[ "$(GET_LATEST_AOSP_CLANG | sed "s/clang-//g")" != "$(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO")" ]]; then
-        LOG "\033[0;33m! Newer AOSP Clang is available ($(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO") -> $(GET_LATEST_AOSP_CLANG | sed "s/clang-//g"))\033[0m"
-    else
-        LOG "\033[0;33m! Failed to fetch latest AOSP Clang version\033[0m"
-    fi
+    GET_LATEST_AOSP_CLANG --compare
 fi
 
 LOG_STEP_IN "- Generating configuration"
