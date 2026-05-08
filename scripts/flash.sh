@@ -23,6 +23,8 @@ _PRINT_USAGE()
 PART="$1"
 FILE="$2"
 RETRY=false
+DEPS=()
+MISSING_DEPS=()
 # ]
 
 if [[ "$#" -lt "2" ]]; then
@@ -30,8 +32,18 @@ if [[ "$#" -lt "2" ]]; then
     exit 1
 fi
 
-if ! type brokkr &>/dev/null; then
-    LOGE "Brokkr was not found. Please download and add it to your path!"
+DEPS=("brokkr" "lsusb")
+
+for i in "${DEPS[@]}"; do
+    if ! type "$i" &>/dev/null; then
+        MISSING_DEPS+=("$i")
+    fi
+done
+
+if [[ "${#MISSING_DEPS[@]}" -ne 0 ]]; then
+    echo -e '\033[1;31m'"The following dependencies are missing from your system:"'\033[0;31m' >&2
+    printf '%s ' "${MISSING_DEPS[@]}" >&2
+    echo -e '\033[0m' >&2
     exit 1
 fi
 
