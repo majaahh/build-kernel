@@ -16,12 +16,10 @@ _PRINT_USAGE()
     echo "Arguments:"
     echo "-d,--device      Specify device codename"
     echo "-h,--help        Prints this help menu"
-    echo "-k,--ksu         Makes a KernelSU Build"
     echo "-r,--regenerate  Regenerates the defconfig"
 }
 
 DEVICE=""
-KSU=false
 REGENERATE=false
 # ]
 
@@ -37,8 +35,6 @@ while [[ "$1" == "-"* ]]; do
     elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
-    elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
-        KSU=true
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         REGENERATE=true
     else
@@ -96,11 +92,6 @@ fi
 
 LOG "- Merging $DEVICE fragment"
 BUILD_KERNEL "$DEVICE.config"
-
-if $KSU; then
-    LOG "- Merging KernelSU fragment"
-    BUILD_KERNEL "ksu.config"
-fi
 
 if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOCALVERSION_AUTO")" == "n" ]]; then
     LOG "- Generating local version"

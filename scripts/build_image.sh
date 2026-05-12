@@ -18,6 +18,7 @@ _PRINT_USAGE()
     echo "Arguments:"
     echo "-d,--device      Specify device codename (required for dtbo)"
     echo "-h,--help        Prints this help menu"
+    echo "-k,--ksu         Adds KernelSU (LKM) (boot image only)"
     echo "--skip-avb       Skips AVB Sign"
     echo "--skip-lz4       Skips LZ4 Compression"
 }
@@ -226,6 +227,22 @@ BUILD_RAMDISK_BINARY()
     LOG "- Adding init from prebuilts/ramdisk/init"
     EVAL "cp -a \"$SRC_DIR/prebuilts/ramdisk/init\" \"$TMP_DIR/ramdisk_build/init\""
 
+    if $KSU; then
+        local KSU_URL="https://github.com/tiann/KernelSU/releases/download/v3.2.4"
+
+        LOG "- Downloading android12-5.10_kernelsu.ko to ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/kernelsu.ko"
+        DOWNLOAD_FILE "$KSU_URL/android12-5.10_kernelsu.ko" "$TMP_DIR/ramdisk_build/kernelsu.ko"
+
+        LOG "- Downloading ksuinit to ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/ksuinit"
+        DOWNLOAD_FILE "$KSU_URL/ksuinit" "$TMP_DIR/ramdisk_build/ksuinit"
+
+        LOG "- Renaming ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/init to ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/init.real"
+        EVAL "mv \"$TMP_DIR/ramdisk_build/init\" \"$TMP_DIR/ramdisk_build/init.real\""
+
+        LOG "- Renaming ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/ksuinit to ${TMP_DIR//$SRC_DIR\//}/ramdisk_build/init"
+        EVAL "mv \"$TMP_DIR/ramdisk_build/ksuinit\" \"$TMP_DIR/ramdisk_build/init\""
+    fi
+
     LOG "- Creating ramdisk binary"
     EVAL "cd \"$TMP_DIR/ramdisk_build\" && find . | cpio --quiet -o -H newc -R root:root > \"ramdisk\"" || return 1
     EVAL "mv \"$TMP_DIR/ramdisk_build/ramdisk\" \"$OUTPUT_DIR/ramdisk\""
@@ -276,6 +293,7 @@ BINARY=""
 IMAGE=""
 OUTPUT_DIR="$2"
 DEVICE=""
+KSU=false
 SKIP_AVB=false
 SKIP_LZ4=false
 # ]
@@ -307,6 +325,8 @@ while [[ "$1" == "-"* ]]; do
     elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
+    elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
+        KSU=true
     elif [[ "$1" == "--skip-avb" ]]; then
         SKIP_AVB=true
     elif [[ "$1" == "--skip-lz4" ]]; then

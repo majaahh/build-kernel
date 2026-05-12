@@ -29,6 +29,7 @@ DEVICE=""
 POST=false
 SKIP_DTBO=false
 BUILD_KERNEL_ARGS=""
+BUILD_IMAGE_ARGS=""
 DATE="$(date +%Y%m%d-%H%M)"
 # ]
 
@@ -41,6 +42,7 @@ while [[ "$1" == "-"* ]]; do
         exit 0
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
         KSU=true
+        BUILD_IMAGE_ARGS+="--ksu"
     elif [[ "$1" == "-r" ]] || [[ "$1" == "--regenerate" ]]; then
         BUILD_KERNEL_ARGS+="-r "
     elif [[ "$1" == "--skip-dtbo" ]]; then
@@ -96,7 +98,7 @@ fi
 EVAL "mkdir -p \"$IMAGES_DIR/kernel\""
 
 for i in "boot" "vendor_boot"; do
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" -d "$DEVICE" || exit 1
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" -d "$DEVICE" $BUILD_IMAGE_ARGS || exit 1
 done
 
 LOG "- Creating Kernel TAR Archive"
