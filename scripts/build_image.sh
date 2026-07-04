@@ -174,7 +174,7 @@ BUILD_DT_IMAGE()
     CMD+="-d \"$DTS_DIR\""
 
     if [[ -z "$DTS_DIR" ]] || [[ ! -d "$DTS_DIR" ]]; then
-        LOGE "Dts directory was not found"
+        LOGE "DTS directory was not found"
         return 1
     fi
 
