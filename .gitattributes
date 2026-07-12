@@ -1,1 +1,13 @@
+#
+# SPDX-FileCopyrightText: Majaahh
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Board
+board/s5e8825/prebuilts/** binary
+
+# Global
 prebuilts/** binary
+
+# Device
+target/a53x/prebuilts/** binary

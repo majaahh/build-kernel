@@ -4,44 +4,35 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# https://github.com/salvogiangri/UN1CA/blob/9709f2557a63a27530ca6b2b0e7f9d007233a063/scripts/utils/log_utils.sh#L43-L104
-# [
-_SET_INDENT()
-{
-    local INDENT="${INDENT_LEVEL:=0}"
-    while [[ "$INDENT" -gt 0 ]]; do
-        echo -n " "
-        INDENT="$((INDENT - 1))"
-    done
-}
-# ]
+# Initial util was taken from https://github.com/salvogiangri/UN1CA/blob/3.1.0/scripts/utils/log_utils.sh#L29-L86
 
 # LOG <message>
-# Prints a log message.
+# Prints a log message in the build output.
 LOG()
 {
-    _SET_INDENT
-    echo -e "$1"
+    local INDENT="${INDENT_LEVEL:=0}"
+
+    echo -e "$(printf "%*s%s" "$INDENT" "" "$1")"
 }
 
 # LOGE <message>
-# Prints an error log message.
+# Prints an error log message in the build output.
 LOGE()
 {
     local RED="\033[0;31m"
     local RESET="\033[0m"
 
-    echo -e "${RED}ERROR: ${1}${RESET}" >&2
+    echo -e "${RED}! ${1}${RESET}" >&2
 }
 
 # LOGW <message>
-# Prints a warning log message.
+# Prints a warning log message in the build output.
 LOGW()
 {
     local YELLOW="\033[0;33m"
     local RESET="\033[0m"
 
-    echo -e "${YELLOW}WARNING: ${1}${RESET}" >&2
+    echo -e "${YELLOW}! ${1}${RESET}" >&2
 }
 
 # LOG_STEP_IN <bold> <message>
@@ -56,7 +47,7 @@ LOG_STEP_IN()
         shift
     fi
 
-    if [[ "$1" ]]; then
+    if [ "$1" ]; then
         LOG "${BOLD}${1}${RESET}"
     fi
 
@@ -69,7 +60,7 @@ LOG_STEP_IN()
 LOG_STEP_OUT()
 {
     local INDENT="${INDENT_LEVEL:=0}"
-    if [[ "$INDENT_LEVEL" -gt 0 ]]; then
+    if [ "$INDENT_LEVEL" -gt 0 ]; then
         export INDENT_LEVEL=$((INDENT - 2))
     fi
 }

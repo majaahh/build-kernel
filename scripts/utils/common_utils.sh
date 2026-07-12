@@ -26,13 +26,28 @@ _CHECK_NON_EMPTY_PARAM()
         echo -n "$1 is not set!" >&2
         echo -e '\033[0m' >&2
 
-        exit 1
+        return 1
     fi
 }
 
 BUILD_KERNEL()
 {
     local CMD
+    local PATH="$PATH"
+
+    # TODO
+    if [[ "$TARGET_TOOLCHAIN" == "gcc" ]]; then
+        LOGE "Kernel build without clang is not supported"
+        return 1
+    fi
+
+    if [[ "$TARGET_TOOLCHAIN" == "clang"* ]]; then
+        PATH="$PATH:$CLANG_DIR/bin"
+    fi
+
+    if [[ "$TARGET_TOOLCHAIN" == *"gcc" ]]; then
+        PATH="$PATH:$GCC_DIR_32/bin:$GCC_DIR_64/bin"
+    fi
 
     CMD+="make "
     CMD+="-C \"$KERNEL_DIR\" "
@@ -41,13 +56,39 @@ BUILD_KERNEL()
     CMD+="CC=\"clang\" "
     CMD+="KBUILD_BUILD_USER=\"Majaahh\" "
     CMD+="KBUILD_BUILD_HOST=\"PC\" "
-    CMD+="LLVM=1 "
-    CMD+="LLVM_IAS=1 "
+    if [[ "$TARGET_TOOLCHAIN" == "clang" ]]; then
+        CMD+="LLVM=1 "
+        CMD+="LLVM_IAS=1 "
+    fi
     CMD+="O=\"$BUILD_DIR\" "
+    if [[ "$TARGET_TOOLCHAIN" == *"gcc" ]]; then
+        CMD+="CLANG_TRIPLE=\"aarch64-linux-gnu-\" "
+        CMD+="CROSS_COMPILE=\"aarch64-linux-android-\" "
+        CMD+="CROSS_COMPILE_ARM32=\"arm-linux-androidkernel-\" "
+        CMD+="CROSS_COMPILE_COMPAT=\"arm-linux-androidkernel-\" "
+    fi
     if [[ -n "$1" ]]; then
         CMD+="$1 "
     fi
     CMD+="> /dev/null"
+
+    if [[ "$*" != "-"* ]]; then
+        if [[ -z "$1" ]]; then
+            LOG "- Building kernel image"
+        else
+            if [[ "$1" == *"_defconfig" ]]; then
+                LOG "- Generating configuration"
+            elif [[ "$1" == *"modules_install" ]]; then
+                LOG "- Installing modules"
+            else
+                if [[ "$2" == "-m" ]] || [[ "$2" == "--merge" ]]; then
+                    LOG "- Merging ${1/\.config} fragment"
+                else
+                    LOG "- Building $1"
+                fi
+            fi
+        fi
+    fi
 
     EVAL "$CMD" || return 1
 }
@@ -64,8 +105,7 @@ DOWNLOAD_FILE()
     local OUTPUT="$2"
 
     EVAL "mkdir -p \"$(dirname "$OUTPUT")\""
-    EVAL "curl -L -o \"$OUTPUT\" \"$URL\""
-    return $?
+    EVAL "curl -L -o \"$OUTPUT\" \"$URL\"" || return 1
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/common_utils.sh#L485
@@ -82,7 +122,7 @@ EVAL()
         echo -n -e '\033[0;33m' >&2
         echo -n    "$OUT" >&2
         echo -e    '\033[0m' >&2
-        exit 1
+        return 1
     fi
 }
 
@@ -97,7 +137,7 @@ CREATE_TAR_ARCHIVE()
     local IMAGES=("$@")
 
     if [[ -f "$TAR_OUT" ]]; then
-        EVAL "rm -f \"$TAR_OUT\""
+        EVAL "rm -f \"$TAR_OUT\"" || return 1
     fi
 
     EVAL "tar -cf \"$TAR_OUT\" --transform='s|.*/||' ${IMAGES[*]}" || return 1
@@ -122,21 +162,21 @@ GET_AOSP_CLANG()
     DOWNLOAD_FILE "$CLANG_URL" "$TMP_DIR/$(basename "$CLANG_URL")" || {
         LOGE "Failed to download latest AOSP Clang"
         EVAL "rm -rf \"$TMP_DIR\""
-        EVAL "rm -rf \"$TOOLCHAIN_DIR\""
+        EVAL "rm -rf \"$CLANG_DIR\""
         return 1
     }
 
-    if [[ -d "$TOOLCHAIN_DIR" ]]; then
-        EVAL "rm -rf \"$TOOLCHAIN_DIR\""
+    if [[ -d "$CLANG_DIR" ]]; then
+        EVAL "rm -rf \"$CLANG_DIR\""
     fi
-    EVAL "mkdir -p \"$TOOLCHAIN_DIR\""
+    EVAL "mkdir -p \"$CLANG_DIR\""
 
     LOG "- Extracting AOSP Clang"
-    EVAL "tar -xf \"$TMP_DIR/$(basename "$CLANG_URL")\" -C \"$TOOLCHAIN_DIR\" && rm \"$TMP_DIR/$(basename "$CLANG_URL")\""
-    EVAL "touch \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-elfedit\""
-    EVAL "touch \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$TOOLCHAIN_DIR/bin/arm-linux-gnueabi-elfedit\""
+    EVAL "tar -xf \"$TMP_DIR/$(basename "$CLANG_URL")\" -C \"$CLANG_DIR\" && rm \"$TMP_DIR/$(basename "$CLANG_URL")\"" || return 1
+    EVAL "touch \"$CLANG_DIR/bin/aarch64-linux-gnu-elfedit\" && chmod +x \"$CLANG_DIR/bin/aarch64-linux-gnu-elfedit\"" || return 1
+    EVAL "touch \"$CLANG_DIR/bin/arm-linux-gnueabi-elfedit\" && chmod +x \"$CLANG_DIR/bin/arm-linux-gnueabi-elfedit\"" || return 1
 
-    EVAL "rm -rf \"$TMP_DIR\""
+    EVAL "rm -rf \"$TMP_DIR\"" || return 1
     LOG_STEP_OUT
 }
 
@@ -164,8 +204,8 @@ GET_LATEST_AOSP_CLANG()
     CURRENT_CLANG="$(printf '%s\n' "$AOSP_LIST" | grep -oP 'href="[^"]*clang-r[0-9]+/' | grep -oP 'clang-r[0-9]+' | sort -V | tail -n1)"
 
     if [[ "$1" == "--compare" ]]; then
-        if [[ -d "$TOOLCHAIN_DIR" ]]; then
-            CURRENT_TAG="$(awk -F'"' '/"tag"/ {print $4}' "$TOOLCHAIN_DIR/BUILD_INFO")"
+        if [[ -d "$CLANG_DIR" ]]; then
+            CURRENT_TAG="$(awk -F'"' '/"tag"/ {print $4}' "$CLANG_DIR/BUILD_INFO")"
 
             if [[ "${CURRENT_CLANG//clang-/}" != "$CURRENT_TAG" ]]; then
                 LOG "\033[0;33m! Newer AOSP Clang is available ($CURRENT_TAG -> ${CURRENT_CLANG//clang-/})\033[0m"
@@ -186,12 +226,10 @@ UPLOAD()
     local ARCHIVE="$1"
     local ARCHIVE_NAME
     local TAG_NAME
-    local REPO
-    local FORCE="${3:-}"
+    local FORCE="$3"
 
     ARCHIVE_NAME="$(basename "$ARCHIVE")"
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
-    REPO="$(git -C "$KERNEL_DIR" remote get-url origin | sed -Ee 's#.*/([^/]+/[^/]+)(\.git)?$#\1#' -e 's/^[^:]*://' -e 's/\.git//')"
 
     if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
         LOG "- Creating tag"
@@ -211,7 +249,7 @@ UPLOAD()
 
             # shellcheck disable=SC2269
             VARIANT="$VARIANT" \
-            gh release view "$TAG_NAME" --repo "$REPO" --json assets \
+            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_SOURCE" --json assets \
                 --jq "
                     .assets[].name
                     | select(
@@ -227,7 +265,7 @@ UPLOAD()
 
             # shellcheck disable=SC2269
             VARIANT="$VARIANT" \
-            gh release view "$TAG_NAME" --repo "$REPO" --json assets \
+            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_SOURCE" --json assets \
                 --jq "
                     .assets[].name
                     | select(

@@ -16,7 +16,7 @@ _PRINT_USAGE()
     echo "Images: boot, dtb, dtbo, vendor_boot"
     echo "Binaries: ramdisk"
     echo "Arguments:"
-    echo "-d,--device      Specify device codename (required for dtbo)"
+    echo "-d,--device      Specifies device codename"
     echo "-h,--help        Prints this help menu"
     echo "--skip-avb       Skips AVB Sign"
     echo "--skip-lz4       Skips LZ4 Compression"
@@ -33,11 +33,6 @@ BUILD_BOOT_IMAGE()
     local MKBOOTIMG="$SRC_DIR/external/mkbootimg/mkbootimg.py"
     local CMD
     local KERNEL="$BUILD_DIR/arch/arm64/boot/Image"
-    local RAMDISK="ramdisk"
-
-    if ! $SKIP_LZ4; then
-        RAMDISK="ramdisk.lz4"
-    fi
 
     LOG_STEP_IN "- Starting $IMAGE image build"
 
@@ -61,54 +56,86 @@ BUILD_BOOT_IMAGE()
     fi
 
     CMD+="$MKBOOTIMG "
-    CMD+="--header_version 4 "
-    CMD+="--os_version 16.0.0 "
+    CMD+="--header_version $TARGET_IMAGE_HEADER_VERSION "
+    CMD+="--os_version $TARGET_OS_VERSION.0.0 "
     CMD+="--os_patch_level \"$(date +%Y-%m)\" "
 
     if [[ "$IMAGE" == "boot" ]]; then
-        SIZE="67108864"
-        CMD+="--kernel \"$KERNEL\" "
-        CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
-        CMD+="--ramdisk \"$TMP_DIR/$RAMDISK\""
+        SIZE="$TARGET_BOOT_IMAGE_SIZE"
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
-        SIZE="33554432"
-        CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
-        CMD+="--vendor_bootconfig \"$TMP_DIR/bootconfig\" "
-        CMD+="--dtb \"$TMP_DIR/dtb.img\" "
-        CMD+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
-        CMD+="--ramdisk_type \"dlkm\" "
-        CMD+="--ramdisk_name \"dlkm\" "
-        CMD+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
+        SIZE="$TARGET_VENDOR_BOOT_IMAGE_SIZE"
+    fi
+
+    # TODO: Figure out what is common and what isn't
+    if [[ "$TARGET_GKI_VERSION" == "2" ]]; then
+        if [[ "$IMAGE" == "boot" ]]; then
+            CMD+="--kernel \"$KERNEL\" "
+            CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
+            CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
+        elif [[ "$IMAGE" == "vendor_boot" ]]; then
+            CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
+            CMD+="--vendor_bootconfig \"$TMP_DIR/bootconfig\" "
+            CMD+="--dtb \"$TMP_DIR/dtb.img\" "
+            CMD+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
+            CMD+="--ramdisk_type \"dlkm\" "
+            CMD+="--ramdisk_name \"dlkm\" "
+            CMD+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
+        fi
+    else
+        # TODO
+        LOGE "Unsupported Generic Kernel Image version: $TARGET_GKI_VERSION"
     fi
 
     if [[ "$IMAGE" == "vendor_boot" ]]; then
         LOG_STEP_IN "- Generating modules"
-        "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules" || return 1
+        "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules/$TARGET_CODENAME" || return 1
         LOG_STEP_OUT
 
         if [[ ! -f "$TMP_DIR/dtb.img" ]]; then
             BUILD_DT_IMAGE "dtb" "$TMP_DIR" || return 1
         fi
 
-        EVAL "cd \"$OUT/modules\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
+        EVAL "mkbootfs \"$OUT/modules\" | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
 
         if [[ -d "$TMP_DIR/ramdisk_platform" ]]; then
             EVAL "rm -rf \"$TMP_DIR/ramdisk_platform\""
         fi
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform\""
 
-        LOG "- Copying prebuilts/vboot_platform/fstab.s5e8825 to ramdisk_platform/fstab.s5e8825"
-        EVAL "cp -rf \"$SRC_DIR/prebuilts/vboot_platform/fstab.s5e8825\" \"$TMP_DIR/ramdisk_platform\""
+        local FSTAB_DIR
+        if [[ -n "$BOARD_DIR" ]]; then
+            FSTAB_DIR="$BOARD_DIR"
+        else
+            FSTAB_DIR="$TARGET_DIR"
+        fi
 
-        EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
-        LOG "- Copying touch firmware for $DEVICE from prebuilts/vboot_platform/vendor/firmware to ramdisk_platform/vendor/firmware"
-        EVAL "find \"$SRC_DIR/prebuilts/vboot_platform/vendor/firmware\" -type f -name \"*$DEVICE*.bin\" -exec \
-            cp -a {} \"$TMP_DIR/ramdisk_platform/vendor/firmware\" \;"
+        local FSTAB
+        FSTAB="$(find "$FSTAB_DIR" -maxdepth 1 -type f -name "fstab.*")"
 
-        EVAL "cd \"$TMP_DIR/ramdisk_platform\" && find . | cpio --quiet -o -H newc -R root:root | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
+        if [[ ! -f "$FSTAB" ]] || [[ -z "$FSTAB" ]]; then
+            LOGE "fstab was not found"
+            exit 1
+        fi
+
+        LOG "- Copying ${FSTAB//$SRC_DIR\//} to ramdisk_platform/$(basename "$FSTAB")"
+        EVAL "cp -a \"$FSTAB\" \"$TMP_DIR/ramdisk_platform/$(basename "$FSTAB")\"" || return 1
+
+        for i in "BOARD_DIR" "TARGET_DIR"; do
+            if [[ -d "${!i}/prebuilts/firmware" ]]; then
+                if [[ ! -d "$TMP_DIR/ramdisk_platform/vendor/firmware" ]]; then
+                    EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
+                fi
+                while IFS= read -r f; do
+                    LOG "- Copying ${f//$SRC_DIR\//} to ramdisk_platform/vendor/firmware"
+                    EVAL "cp -a \"$f\" \"$TMP_DIR/ramdisk_platform/vendor/firmware/$(basename "$f")\"" || return 1
+                done < <(find "${!i}/prebuilts/firmware" -type f)
+            fi
+        done
+
+        EVAL "mkbootfs \"$TMP_DIR/ramdisk_platform\" | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
 
         if [[ -f "$TMP_DIR/bootconfig" ]]; then
-            EVAL "rm -f \"$TMP_DIR/bootconfig\""
+            EVAL "rm -f \"$TMP_DIR/bootconfig\"" || return 1
         fi
 
         EVAL "echo \"buildtime_bootconfig=enable\" > \"$TMP_DIR/bootconfig\""
@@ -148,29 +175,31 @@ BUILD_DT_IMAGE()
     local OUTPUT_DIR="$2"
     local CONFIGURATION
     local CMD
-    local DTS_DIR
+    local DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts"
 
     if [[ "$IMAGE" == "dtb" ]]; then
-        CONFIGURATION="s5e8825"
-        DTS_DIR="$BUILD_DIR/arch/arm64/boot/dts/exynos"
+        if [[ -f "$TARGET_DIR/$BOARD_CODENAME.cfg" ]]; then
+            CONFIGURATION="$TARGET_DIR/$BOARD_CODENAME.cfg"
+        elif [[ -f "$BOARD_DIR/$BOARD_CODENAME.cfg" ]]; then
+            CONFIGURATION="$BOARD_DIR/$BOARD_CODENAME.cfg"
+        else
+            LOGE "DTB configuration was not found"
+            return 1
+        fi
+        DTS_DIR="$(dirname "$(find "$DTS_DIR" -type f -name "$TARGET_DTB_NAME.dtb")")"
     elif [[ "$IMAGE" == "dtbo" ]]; then
-        local SIZE
-
-        CONFIGURATION="$DEVICE"
-        DTS_DIR="$(find "$BUILD_DIR/arch/arm64/boot/dts" -type d -name "$(echo "$DEVICE" | cut -d"_" -f1)" | tail -n 1)"
-        SIZE="8388608"
+        CONFIGURATION="$TARGET_DIR/$DEVICE.cfg"
+        DTS_DIR="$(dirname "$(find "$DTS_DIR" -type f -name "$TARGET_CODENAME*.dtbo" -print -quit)")"
     fi
 
-    if [[ ! -f "$SRC_DIR/configs/$CONFIGURATION.cfg" ]] && [[ "$IMAGE" == "dtbo" ]]; then
-        LOGE "$CONFIGURATION.cfg was not found"
+    if [[ ! -f "$CONFIGURATION" ]]; then
+        LOGE "${CONFIGURATION//$SRC_DIR\//} was not found"
         return 1
     fi
 
-    LOG_STEP_IN "- Starting $IMAGE image build"
-
     CMD+="mkdtboimg cfg_create "
     CMD+="\"$OUTPUT_DIR/$IMAGE.img\" "
-    CMD+="\"$SRC_DIR/configs/$CONFIGURATION.cfg\" "
+    CMD+="\"$CONFIGURATION\" "
     CMD+="-d \"$DTS_DIR\""
 
     if [[ -z "$DTS_DIR" ]] || [[ ! -d "$DTS_DIR" ]]; then
@@ -178,7 +207,6 @@ BUILD_DT_IMAGE()
         return 1
     fi
 
-    LOG_STEP_IN "- Creating $IMAGE image"
     if [[ ! -d "$OUTPUT_DIR" ]]; then
         EVAL "mkdir -p \"$OUTPUT_DIR\"" || return 1
     fi
@@ -187,12 +215,13 @@ BUILD_DT_IMAGE()
         EVAL "rm -f \"$OUTPUT_DIR/$IMAGE.img\"" || return 1
     fi
 
+    LOG_STEP_IN "- Creating $IMAGE image"
     EVAL "$CMD" || return 1
 
     if ! $SKIP_AVB && [[ "$IMAGE" == "dtbo" ]]; then
-        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$SIZE" || return 1
+        SIGN_IMAGE_WITH_AVB "$OUTPUT_DIR/$IMAGE.img" "$TARGET_DTBO_IMAGE_SIZE" || return 1
     fi
-    LOG_STEP_OUT; LOG_STEP_OUT
+    LOG_STEP_OUT
 }
 
 BUILD_RAMDISK_BINARY()
@@ -200,6 +229,7 @@ BUILD_RAMDISK_BINARY()
     _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$1" || return 1
 
     local OUTPUT_DIR="$1"
+    # TODO: Check if this is common and if it's common then how common it is
     local DIRS=(
         "debug_ramdisk" "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
         "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
@@ -223,20 +253,26 @@ BUILD_RAMDISK_BINARY()
         EVAL "mkdir -p \"$TMP_DIR/ramdisk_build/$i\"" || return 1
     done
 
-    LOG "- Adding init from prebuilts/ramdisk/init"
-    EVAL "cp -a \"$SRC_DIR/prebuilts/ramdisk/init\" \"$TMP_DIR/ramdisk_build/init\""
+    local INIT
+    if [[ -n "$BOARD_DIR" ]]; then
+        INIT="$BOARD_DIR"
+    else
+        INIT="$TARGET_DIR"
+    fi
+    INIT+="/prebuilts/ramdisk/init"
+
+    if [[ ! -f "$INIT" ]]; then
+        LOGE "init was not found"
+        exit 1
+    fi
+
+    LOG "- Copying ${INIT//$SRC_DIR\//} to ramdisk_build/init"
+    EVAL "cp -a \"$INIT\" \"$TMP_DIR/ramdisk_build/init\"" || return 1
 
     LOG "- Creating ramdisk binary"
-    EVAL "cd \"$TMP_DIR/ramdisk_build\" && find . | cpio --quiet -o -H newc -R root:root > \"ramdisk\"" || return 1
-    EVAL "mv \"$TMP_DIR/ramdisk_build/ramdisk\" \"$OUTPUT_DIR/ramdisk\""
+    EVAL "mkbootfs \"$TMP_DIR/ramdisk_build\" | lz4 -9cl > \"$OUTPUT_DIR/ramdisk.lz4\"" || return 1
 
     EVAL "rm -rf \"$TMP_DIR/ramdisk_build\""
-
-    if ! $SKIP_LZ4; then
-        LOG "- Compressing ramdisk binary with lz4"
-        EVAL "lz4 -9cl \"$OUTPUT_DIR/ramdisk\" > \"$OUTPUT_DIR/ramdisk.lz4\""
-        EVAL "rm -f \"$OUTPUT_DIR/ramdisk\""
-    fi
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/internal/build_flashable_zip.sh#L486-L511
@@ -263,7 +299,7 @@ SIGN_IMAGE_WITH_AVB()
         CMD+="--key \"$SRC_DIR/security/testkey_rsa4096.pem\""
 
         LOG "- Signing image with AVB"
-        EVAL "$CMD"
+        EVAL "$CMD" || return 1
     fi
 }
 
@@ -275,9 +311,9 @@ fi
 BINARY=""
 IMAGE=""
 OUTPUT_DIR="$2"
-DEVICE=""
 SKIP_AVB=false
 SKIP_LZ4=false
+DEVICE="$TARGET_CODENAME"
 # ]
 
 if [[ "$1" != "boot" ]] && [[ "$1" != "dtb" ]] && \
@@ -315,14 +351,6 @@ while [[ "$1" == "-"* ]]; do
 
     shift
 done
-
-if [[ -z "$DEVICE" ]]; then
-    if [[ "$IMAGE" == "dtbo" ]] || [[ "$IMAGE" == "vendor_boot" ]]; then
-        LOGE "Device must be set for $IMAGE build"
-        _PRINT_USAGE
-        exit 1
-    fi
-fi
 
 if [[ "$BINARY" == "ramdisk" ]]; then
     if [[ ! -d "$OUTPUT_DIR" ]]; then

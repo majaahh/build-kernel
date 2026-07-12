@@ -7,7 +7,7 @@
 # [
 _PRINT_USAGE()
 {
-    echo "Usage: build.sh [arguments] <device>"
+    echo "Usage: build.sh [arguments]"
     echo "Arguments:"
     echo "-f,--flash       Flashes latest build"
     echo "-h,--help        Prints this help menu"
@@ -25,14 +25,13 @@ source "$SRC_DIR/scripts/utils/log_utils.sh" || exit 1
 FLASH=false
 UPLOAD=false
 KSU=false
-DEVICE=""
 POST=false
 SKIP_DTBO=false
 BUILD_KERNEL_ARGS=""
 DATE="$(date +%Y%m%d-%H%M)"
 # ]
 
-while [[ "$1" == "-"* ]]; do
+while [[ "$1" ]]; do
     if [[ "$1" == "-f" ]] || [[ "$1" == "--flash" ]]; then
         FLASH=true
         POST=true
@@ -57,23 +56,13 @@ while [[ "$1" == "-"* ]]; do
     shift
 done
 
-DEVICE="$1"
-
-if [[ "$BUILD_KERNEL_ARGS" != *"-r"* ]] && [[ -z "$DEVICE" ]]; then
-    LOGE "No device specified"
-    _PRINT_USAGE
-    exit 1
-elif [[ -n "$DEVICE" ]]; then
-    BUILD_KERNEL_ARGS+="-d $DEVICE"
-fi
-
-SUFFIX="$DEVICE"
+SUFFIX="$TARGET_CODENAME"
 if $KSU; then
-    SUFFIX="KernelSU-$DEVICE"
+    SUFFIX="KernelSU-$TARGET_CODENAME"
 fi
 
 KERNEL_TAR_NAME="UN1CA_Kernel-$DATE-$SUFFIX"
-DTBO_TAR_NAME="UN1CA_DTBO-$DATE-$DEVICE"
+DTBO_TAR_NAME="UN1CA_DTBO-$DATE-$TARGET_CODENAME"
 
 LOG_STEP_IN true "Building kernel"
 # shellcheck disable=SC2086
@@ -95,30 +84,33 @@ if [[ -d "$IMAGES_DIR/kernel" ]]; then
 fi
 EVAL "mkdir -p \"$IMAGES_DIR/kernel\""
 
-for i in "boot" "vendor_boot"; do
-    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" -d "$DEVICE" || exit 1
+IMAGES=("boot")
+
+if [[ -n "$TARGET_VENDOR_BOOT_IMAGE_SIZE" ]]; then
+    IMAGES+=("vendor_boot")
+fi
+
+for i in "${IMAGES[@]}"; do
+    "$SRC_DIR/scripts/build_image.sh" "$i" "$IMAGES_DIR/kernel" || exit 1
 done
 
 LOG "- Creating Kernel TAR Archive"
 CREATE_TAR_ARCHIVE "$OUT/$KERNEL_TAR_NAME.tar" "$IMAGES_DIR/kernel/boot.img.lz4" "$IMAGES_DIR/kernel/vendor_boot.img.lz4" || exit 1
 
 if ! $SKIP_DTBO; then
-    if [[ -d "$IMAGES_DIR/dtbo" ]]; then
-        EVAL "rm -rf \"$IMAGES_DIR/dtbo\""
-    fi
-    EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
+    while IFS= read -r f; do
+        DEVICE="$(basename "$f" ".cfg")"
 
-    if [[ "$DEVICE" == "a53x" ]]; then
-        for i in "" "_jpn"; do
-            "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "${DEVICE}${i}" || exit 1
-            LOG "- Creating dtbo TAR Archive"
-            CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME$i.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
-        done
-    else
+        if [[ -d "$IMAGES_DIR/dtbo" ]]; then
+            EVAL "rm -rf \"$IMAGES_DIR/dtbo\""
+        fi
+        EVAL "mkdir -p \"$IMAGES_DIR/dtbo\""
+
         "$SRC_DIR/scripts/build_image.sh" "dtbo" "$IMAGES_DIR/dtbo" -d "$DEVICE" || exit 1
-        LOG "- Creating dtbo TAR Archive"
-        CREATE_TAR_ARCHIVE "$OUT/$DTBO_TAR_NAME.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
-    fi
+
+        LOG "- Creating DTBO TAR Archive for $DEVICE"
+        CREATE_TAR_ARCHIVE "$OUT/${DTBO_TAR_NAME/$TARGET_CODENAME/$DEVICE}.tar" "$IMAGES_DIR/dtbo/dtbo.img.lz4" || exit 1
+    done < <(find "$TARGET_DIR" -maxdepth 1 -type f -name "$TARGET_CODENAME*.cfg")
     LOG_STEP_OUT
 fi
 
@@ -137,10 +129,9 @@ if $UPLOAD; then
 
     UPLOAD "$OUT/$KERNEL_TAR_NAME.tar" || exit 1
     if ! $SKIP_DTBO; then
-        UPLOAD "$OUT/$DTBO_TAR_NAME.tar" || exit 1
-        if [[ "$DEVICE" == "a53x" ]]; then
-            UPLOAD "$OUT/${DTBO_TAR_NAME}_jpn.tar" || exit 1
-        fi
+        while IFS= read -r f; do
+            UPLOAD "${f//$SRC_DIR\//}" || exit 1
+        done < <(find "$OUT" -maxdepth 1 -type f -name "*DTBO-$DATE-$TARGET_CODENAME*.tar")
     fi
     ) || exit 1
 fi

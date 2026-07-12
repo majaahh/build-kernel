@@ -14,27 +14,17 @@ _PRINT_USAGE()
 {
     echo "Usage: build_kernel.sh <arguments>"
     echo "Arguments:"
-    echo "-d,--device      Specify device codename"
     echo "-h,--help        Prints this help menu"
     echo "-k,--ksu         Makes a KernelSU Build"
     echo "-r,--regenerate  Regenerates the defconfig"
 }
 
-DEVICE=""
 KSU=false
 REGENERATE=false
 # ]
 
-while [[ "$1" == "-"* ]]; do
-    if [[ "$1" == "-d" ]] || [[ "$1" == "--device" ]]; then
-        if [[ -z "$2" ]] || [[ "$2" == "-"* ]]; then
-            LOGE "Missing argument for $1"
-            _PRINT_USAGE
-            exit 1
-        fi
-        DEVICE="$2"
-        shift
-    elif [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+while [[ "$1" ]]; do
+    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
         _PRINT_USAGE
         exit 0
     elif [[ "$1" == "-k" ]] || [[ "$1" == "--ksu" ]]; then
@@ -50,56 +40,62 @@ while [[ "$1" == "-"* ]]; do
     shift
 done
 
-if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
-    LOGE "No device specified"
-    _PRINT_USAGE
-    exit 1
-fi
-
 if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN "- Setting up kernel source"
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
         LOG "- Cloning kernel source"
-        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/UN1CA/kernel_samsung_s5e8825.git\" \"$KERNEL_DIR\""
+        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/$TARGET_KERNEL_SOURCE.git\" \"$KERNEL_DIR\""
     fi
 
     if [[ -f "$KERNEL_DIR/.gitmodules" ]]; then
         LOG "- Fetching submodules"
-        EVAL "cd \"$KERNEL_DIR\" && git submodule update --init -f --checkout"
+        EVAL "git -C \"$KERNEL_DIR\" submodule update --init -f --checkout"
     fi
 
     LOG_STEP_OUT
 fi
 
-if ! $REGENERATE && [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]]; then
-    LOGE "Configuration fragment for $DEVICE was not found"
-    exit 1
+if [[ "$TARGET_TOOLCHAIN" == "clang"* ]]; then
+    if [[ ! -d "$CLANG_DIR" ]]; then
+        # shellcheck disable=SC2119
+        GET_AOSP_CLANG || exit 1
+    else
+        GET_LATEST_AOSP_CLANG --compare
+    fi
 fi
 
-if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
-    # shellcheck disable=SC2119
-    GET_AOSP_CLANG || exit 1
-else
-    GET_LATEST_AOSP_CLANG --compare
+if [[ "$TARGET_TOOLCHAIN" == *"gcc" ]]; then
+    if [[ ! -d "$GCC_DIR_32" ]]; then
+        LOG "- Cloning 32-bit AOSP GCC"
+        EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git\" \"$GCC_DIR_32\"" || exit 1
+    fi
+
+    if [[ ! -d "$GCC_DIR_64" ]]; then
+        LOG "- Cloning 64-bit AOSP GCC"
+        EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git\" \"$GCC_DIR_64\"" || exit 1
+    fi
 fi
 
-LOG_STEP_IN "- Generating configuration"
-BUILD_KERNEL "s5e8825_defconfig"
+BUILD_KERNEL "$TARGET_KERNEL_DEFCONFIG" || exit 1
+LOG_STEP_IN
 
 if $REGENERATE; then
-    LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
-    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\""
+    LOG "- Copying configuration to arch/arm64/configs/$TARGET_KERNEL_DEFCONFIG"
+    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/$TARGET_KERNEL_DEFCONFIG\""
     LOG_STEP_OUT
     exit 0
 fi
 
-LOG "- Merging $DEVICE fragment"
-BUILD_KERNEL "$DEVICE.config"
+if [[ -n "$TARGET_KERNEL_DEFCONFIG_FRAGMENTS" ]]; then
+    for i in $TARGET_KERNEL_DEFCONFIG_FRAGMENTS; do
+        BUILD_KERNEL "$i" -m || exit 1
+    done
+fi
 
 if $KSU; then
     LOG "- Merging KernelSU fragment"
-    BUILD_KERNEL "ksu.config"
+    BUILD_KERNEL "ksu.config" -q || exit 1
 fi
 
 if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOCALVERSION_AUTO")" == "n" ]]; then
@@ -107,7 +103,6 @@ if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOC
     EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
 fi
 LOG_STEP_OUT
-LOG "- Building dtbs"
-BUILD_KERNEL "dtbs"
-LOG "- Building kernel image"
-BUILD_KERNEL
+
+BUILD_KERNEL "dtbs" || exit 1
+BUILD_KERNEL || exit 1
