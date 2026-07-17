@@ -93,6 +93,52 @@ BUILD_KERNEL()
     EVAL "$CMD" || return 1
 }
 
+COMPARE_KERNEL_VERSION()
+{
+    _CHECK_NON_EMPTY_PARAM "COMPARISON" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "VERSION" "$2" || return 1
+
+    local COMPARISON="$1"
+    local TARGET_VERSION="$2"
+    local KERNEL_VERSION
+    local VERSION PATCHLEVEL SUBLEVEL
+    local LOWER HIGHER
+
+    KERNEL_VERSION="$(GET_KERNEL_VERSION)" || return 1
+
+    IFS='.' read -r VERSION PATCHLEVEL SUBLEVEL <<< "$TARGET_VERSION"
+    TARGET_VERSION="$VERSION.$PATCHLEVEL.$SUBLEVEL"
+
+    LOWER="$(echo -e "$KERNEL_VERSION\n$TARGET_VERSION" | sort -V | head -n1)"
+    HIGHER="$(echo -e "$KERNEL_VERSION\n$TARGET_VERSION" | sort -V | tail -n1)"
+
+    if [[ "$COMPARISON" == "newer" ]] || [[ "$COMPARISON" == "higher" ]]; then
+        [[ "$KERNEL_VERSION" != "$TARGET_VERSION" ]] && [[ "$HIGHER" == "$KERNEL_VERSION" ]]
+    elif [[ "$COMPARISON" == "older" ]] || [[ "$COMPARISON" == "lower" ]]; then
+        [[ "$KERNEL_VERSION" != "$TARGET_VERSION" ]] && [[ "$LOWER" == "$KERNEL_VERSION" ]]
+    else
+        LOGE "Invalid comparison: $COMPARISON"
+        return 1
+    fi
+}
+
+CREATE_TAR_ARCHIVE()
+{
+    _CHECK_NON_EMPTY_PARAM "TAR_OUT" "$1" || return 1
+    _CHECK_NON_EMPTY_PARAM "IMAGES" "$2" || return 1
+
+    local TAR_OUT="$1"
+    shift
+
+    local IMAGES=("$@")
+
+    if [[ -f "$TAR_OUT" ]]; then
+        EVAL "rm -f \"$TAR_OUT\"" || return 1
+    fi
+
+    EVAL "tar -cf \"$TAR_OUT\" --transform='s|.*/||' ${IMAGES[*]}" || return 1
+}
+
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/module_utils.sh#L79
 # DOWNLOAD_FILE "<url>" "<output path>"
 # Downloads the file from the provided URL and stores it in the desidered output path.
@@ -124,23 +170,6 @@ EVAL()
         echo -e    '\033[0m' >&2
         return 1
     fi
-}
-
-CREATE_TAR_ARCHIVE()
-{
-    _CHECK_NON_EMPTY_PARAM "TAR_OUT" "$1" || return 1
-    _CHECK_NON_EMPTY_PARAM "IMAGES" "$2" || return 1
-
-    local TAR_OUT="$1"
-    shift
-
-    local IMAGES=("$@")
-
-    if [[ -f "$TAR_OUT" ]]; then
-        EVAL "rm -f \"$TAR_OUT\"" || return 1
-    fi
-
-    EVAL "tar -cf \"$TAR_OUT\" --transform='s|.*/||' ${IMAGES[*]}" || return 1
 }
 
 GET_AOSP_CLANG()
@@ -178,6 +207,21 @@ GET_AOSP_CLANG()
 
     EVAL "rm -rf \"$TMP_DIR\"" || return 1
     LOG_STEP_OUT
+}
+
+GET_KERNEL_VERSION()
+{
+    if [[ ! -f "$KERNEL_DIR/Makefile" ]]; then
+        LOGE "Kernel Makefile was not found: ${KERNEL_DIR//$SRC_DIR\//}"
+        return 1
+    fi
+
+    awk '
+        /^VERSION[[:space:]]*=/     { v=$3 }
+        /^PATCHLEVEL[[:space:]]*=/  { p=$3 }
+        /^SUBLEVEL[[:space:]]*=/    { s=$3 }
+        END { print v "." p "." s }
+    ' "$KERNEL_DIR/Makefile"
 }
 
 # shellcheck disable=SC2120

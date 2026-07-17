@@ -56,34 +56,34 @@ BUILD_BOOT_IMAGE()
     fi
 
     CMD+="$MKBOOTIMG "
-    CMD+="--header_version $TARGET_IMAGE_HEADER_VERSION "
-    CMD+="--os_version $TARGET_OS_VERSION.0.0 "
+    CMD+="--header_version \"$TARGET_IMAGE_HEADER_VERSION\" "
+    CMD+="--os_version \"$TARGET_OS_VERSION.0.0\" "
     CMD+="--os_patch_level \"$(date +%Y-%m)\" "
 
     if [[ "$IMAGE" == "boot" ]]; then
         SIZE="$TARGET_BOOT_IMAGE_SIZE"
+        if [[ -n "$TARGET_BOOT_IMAGE_CMDLINE" ]]; then
+            CMD+="--cmdline \"$TARGET_BOOT_IMAGE_CMDLINE\" "
+        fi
+        CMD+="--kernel \"$KERNEL\" "
+        CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
+        CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
         SIZE="$TARGET_VENDOR_BOOT_IMAGE_SIZE"
-    fi
-
-    # TODO: Figure out what is common and what isn't
-    if [[ "$TARGET_GKI_VERSION" == "2" ]]; then
-        if [[ "$IMAGE" == "boot" ]]; then
-            CMD+="--kernel \"$KERNEL\" "
-            CMD+="--output \"$OUTPUT_DIR/$IMAGE.img\" "
-            CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
-        elif [[ "$IMAGE" == "vendor_boot" ]]; then
-            CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
+        # TODO: Commonize "bootconfig" under proper conditions
+        if [[ -n "$TARGET_VENDOR_BOOT_IMAGE_CMDLINE" ]]; then
+            CMD+="--cmdline \"$TARGET_VENDOR_BOOT_IMAGE_CMDLINE\" "
+        fi
+        CMD+="--dtb \"$TMP_DIR/dtb.img\" "
+        CMD+="--vendor_boot \"$OUTPUT_DIR/$IMAGE.img\" "
+        if [[ -f "$TMP_DIR/bootconfig" ]]; then
             CMD+="--vendor_bootconfig \"$TMP_DIR/bootconfig\" "
-            CMD+="--dtb \"$TMP_DIR/dtb.img\" "
-            CMD+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
-            CMD+="--ramdisk_type \"dlkm\" "
+        fi
+        CMD+="--vendor_ramdisk \"$TMP_DIR/ramdisk_platform.lz4\" "
+        if [[ "$TARGET_IMAGE_HEADER_VERSION" == "4" ]]; then
             CMD+="--ramdisk_name \"dlkm\" "
             CMD+="--vendor_ramdisk_fragment \"$TMP_DIR/ramdisk_dlkm.lz4\""
         fi
-    else
-        # TODO
-        LOGE "Unsupported Generic Kernel Image version: $TARGET_GKI_VERSION"
     fi
 
     if [[ "$IMAGE" == "vendor_boot" ]]; then
@@ -134,11 +134,9 @@ BUILD_BOOT_IMAGE()
 
         EVAL "mkbootfs \"$TMP_DIR/ramdisk_platform\" | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
 
-        if [[ -f "$TMP_DIR/bootconfig" ]]; then
-            EVAL "rm -f \"$TMP_DIR/bootconfig\"" || return 1
+        if COMPARE_KERNEL_VERSION "higher" "5.10"; then
+            EVAL "echo \"buildtime_bootconfig=enable\" > \"$TMP_DIR/bootconfig\""
         fi
-
-        EVAL "echo \"buildtime_bootconfig=enable\" > \"$TMP_DIR/bootconfig\""
     fi
 
     if [[ ! -d "$OUTPUT_DIR" ]]; then
