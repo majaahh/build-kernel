@@ -228,6 +228,11 @@ UPLOAD()
     local TAG_NAME
     local FORCE="$3"
 
+    if [[ "$TARGET_KERNEL_URL" != *"github.com"* ]]; then
+        LOGE "Uploading is only supported for GitHub sources"
+        return 1
+    fi
+
     ARCHIVE_NAME="$(basename "$ARCHIVE")"
     TAG_NAME="UN1CA_Kernel-$(git rev-parse --short HEAD)"
 
@@ -249,7 +254,7 @@ UPLOAD()
 
             # shellcheck disable=SC2269
             VARIANT="$VARIANT" \
-            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_SOURCE" --json assets \
+            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_REPO" --json assets \
                 --jq "
                     .assets[].name
                     | select(
@@ -265,7 +270,7 @@ UPLOAD()
 
             # shellcheck disable=SC2269
             VARIANT="$VARIANT" \
-            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_SOURCE" --json assets \
+            gh release view "$TAG_NAME" --repo "$TARGET_KERNEL_REPO" --json assets \
                 --jq "
                     .assets[].name
                     | select(

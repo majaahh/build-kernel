@@ -45,7 +45,7 @@ if [[ ! -d "$KERNEL_DIR" ]]; then
 
     if [[ ! -d "$KERNEL_DIR" ]]; then
         LOG "- Cloning kernel source"
-        EVAL "git clone -j\"$(nproc --all)\" \"https://github.com/$TARGET_KERNEL_SOURCE.git\" \"$KERNEL_DIR\""
+        EVAL "git clone -j\"$(nproc --all)\" \"$TARGET_KERNEL_URL\" \"$KERNEL_DIR\""
     fi
 
     if [[ -f "$KERNEL_DIR/.gitmodules" ]]; then

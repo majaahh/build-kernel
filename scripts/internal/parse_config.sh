@@ -88,5 +88,27 @@ if [[ "${#MISSING[@]}" -ne 0 ]]; then
     echo -e '\033[1;31m'"The following configs are not set:"'\033[0;31m' >&2
     printf '%s ' "${MISSING[@]}" >&2
     echo -e '\033[0m' >&2
+    unset MISSING
     exit 1
 fi
+
+if [[ "$TARGET_KERNEL_SOURCE" == *"://"* ]] || [[ "$TARGET_KERNEL_SOURCE" == "git@"* ]]; then
+    TARGET_KERNEL_URL="$TARGET_KERNEL_SOURCE"
+    if [[ "$TARGET_KERNEL_SOURCE" == "git@"* ]]; then
+        _KS_REPO="${TARGET_KERNEL_SOURCE#git@}"
+        _KS_REPO="${_KS_REPO#*:}"
+    else
+        _KS_REPO="${TARGET_KERNEL_SOURCE#*://}"
+        _KS_REPO="${_KS_REPO#*/}"
+    fi
+    _KS_REPO="${_KS_REPO%.git}"
+    _KS_REPO="${_KS_REPO%/}"
+    TARGET_KERNEL_REPO="$_KS_REPO"
+else
+    TARGET_KERNEL_REPO="$TARGET_KERNEL_SOURCE"
+    TARGET_KERNEL_URL="https://github.com/$TARGET_KERNEL_SOURCE.git"
+fi
+export TARGET_KERNEL_REPO
+export TARGET_KERNEL_URL
+
+unset TARGET TARGET_CONFIG REQUIRED_CONFIGS _KS_REPO

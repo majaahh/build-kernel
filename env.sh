@@ -42,6 +42,6 @@ elif [[ -n "$BOARD_DIR" ]]; then
     unset BOARD_DIR
 fi
 
-export KERNEL_DIR="$KERNELS_DIR/${TARGET_KERNEL_SOURCE/\//_}"
+export KERNEL_DIR="$KERNELS_DIR/${TARGET_KERNEL_REPO/\//_}"
 
 unset TARGET
