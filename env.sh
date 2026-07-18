@@ -12,7 +12,7 @@ TARGET="$1"
 export SRC_DIR
 export PREV_DIR
 export OUT="$SRC_DIR/out"
-export BUILD_DIR="$OUT/build"
+export BUILDS_DIR="$OUT/builds"
 export IMAGES_DIR="$OUT/images"
 export KERNELS_DIR="$OUT/kernels"
 export TOOLCHAIN_DIR="$OUT/toolchains"
@@ -42,6 +42,7 @@ elif [[ -n "$BOARD_DIR" ]]; then
     unset BOARD_DIR
 fi
 
+export KERNEL_DIR="$BUILDS_DIR/$TARGET_CODENAME"
 export KERNEL_DIR="$KERNELS_DIR/${TARGET_KERNEL_REPO/\//_}"
 
 unset TARGET

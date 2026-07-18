@@ -70,7 +70,7 @@ BUILD_BOOT_IMAGE()
         CMD+="--ramdisk \"$TMP_DIR/ramdisk.lz4\""
     elif [[ "$IMAGE" == "vendor_boot" ]]; then
         SIZE="$TARGET_VENDOR_BOOT_IMAGE_SIZE"
-        # TODO: Commonize "bootconfig" under proper conditions
+        # TODO: Add "bootconfig" under proper conditions
         if [[ -n "$TARGET_VENDOR_BOOT_IMAGE_CMDLINE" ]]; then
             CMD+="--cmdline \"$TARGET_VENDOR_BOOT_IMAGE_CMDLINE\" "
         fi
@@ -95,7 +95,7 @@ BUILD_BOOT_IMAGE()
             BUILD_DT_IMAGE "dtb" "$TMP_DIR" || return 1
         fi
 
-        EVAL "mkbootfs \"$OUT/modules\" | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
+        EVAL "mkbootfs \"$OUT/modules/$TARGET_CODENAME\" | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
 
         if [[ -d "$TMP_DIR/ramdisk_platform" ]]; then
             EVAL "rm -rf \"$TMP_DIR/ramdisk_platform\""
@@ -117,22 +117,31 @@ BUILD_BOOT_IMAGE()
             exit 1
         fi
 
-        LOG "- Copying ${FSTAB//$SRC_DIR\//} to ramdisk_platform/$(basename "$FSTAB")"
-        EVAL "cp -a \"$FSTAB\" \"$TMP_DIR/ramdisk_platform/$(basename "$FSTAB")\"" || return 1
+        local RAMDISK_PLATFORM_BUILD_DIR="$TMP_DIR/ramdisk_platform"
 
-        for i in "BOARD_DIR" "TARGET_DIR"; do
-            if [[ -d "${!i}/prebuilts/firmware" ]]; then
-                if [[ ! -d "$TMP_DIR/ramdisk_platform/vendor/firmware" ]]; then
-                    EVAL "mkdir -p \"$TMP_DIR/ramdisk_platform/vendor/firmware\""
-                fi
-                while IFS= read -r f; do
-                    LOG "- Copying ${f//$SRC_DIR\//} to ramdisk_platform/vendor/firmware"
-                    EVAL "cp -a \"$f\" \"$TMP_DIR/ramdisk_platform/vendor/firmware/$(basename "$f")\"" || return 1
-                done < <(find "${!i}/prebuilts/firmware" -type f)
+        LOG "- Copying ${FSTAB//$SRC_DIR\//} to ${RAMDISK_PLATFORM_BUILD_DIR//$SRC_DIR\//}/$(basename "$FSTAB")"
+        EVAL "cp -a \"$FSTAB\" \"$RAMDISK_PLATFORM_BUILD_DIR/$(basename "$FSTAB")\"" || return 1
+
+        for i in "$BOARD_DIR" "$TARGET_DIR"; do
+            if [[ -z "$i" ]]; then
+                continue
             fi
+
+            if [[ ! -d "$i/prebuilts/firmware" ]]; then
+                continue
+            fi
+
+            while IFS= read -r f; do
+                if [[ ! -d "$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}" ]]; then
+                    EVAL "mkdir -p \"$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}\"" || return 1
+                fi
+
+                LOG "- Copying ${f//$SRC_DIR\//} to ${RAMDISK_PLATFORM_BUILD_DIR//$SRC_DIR\//}/vendor/firmware/$(basename "$f")"
+                EVAL "cp -a \"$f\" \"$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/$(basename "$f")\"" || return 1
+            done < <(find "$i/prebuilts/firmware" -mindepth 1)
         done
 
-        EVAL "mkbootfs \"$TMP_DIR/ramdisk_platform\" | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
+        EVAL "mkbootfs \"$RAMDISK_PLATFORM_BUILD_DIR\" | lz4 -9cl > \"$TMP_DIR/ramdisk_platform.lz4\"" || return 1
 
         if COMPARE_KERNEL_VERSION "higher" "5.10"; then
             EVAL "echo \"buildtime_bootconfig=enable\" > \"$TMP_DIR/bootconfig\""
@@ -227,50 +236,56 @@ BUILD_RAMDISK_BINARY()
     _CHECK_NON_EMPTY_PARAM "OUTPUT_DIR" "$1" || return 1
 
     local OUTPUT_DIR="$1"
-    # TODO: Check if this is common and if it's common then how common it is
-    local DIRS=(
-        "debug_ramdisk" "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
-        "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
-        "first_stage_ramdisk/sys" "dev" "metadata" "mnt" "proc" "second_stage_resources" "sys" "system/etc/ramdisk"
-      )
-
-    if [[ -f "$OUTPUT_DIR/ramdisk" ]] || [[ -f "$OUTPUT_DIR/ramdisk.lz4" ]]; then
-        EVAL "find \"$OUTPUT_DIR\" -maxdepth 1 -name \"ramdisk*lz4\" -type f | rm -f" || return 1
+    local RAMDISK_BUILD_DIR="$TMP_DIR/ramdisk_build"
+        local DIRS=("debug_ramdisk" "dev" "mnt" "proc" "sys")
+    if [[ "$TARGET_IMAGE_HEADER_VERSION" == "4" ]]; then
+        local DIRS+=(
+            "first_stage_ramdisk/debug_ramdisk" "first_stage_ramdisk/dev" "first_stage_ramdisk/metadata" 
+            "first_stage_ramdisk/mnt" "first_stage_ramdisk/proc" "first_stage_ramdisk/second_stage_resources"
+            "first_stage_ramdisk/sys" "metadata" "second_stage_resources" "system/etc/ramdisk"
+          )
     fi
 
-    if [[ -d "$TMP_DIR/ramdisk_build" ]]; then
-        EVAL "rm -rf \"$TMP_DIR/ramdisk_build\""
+    if [[ -f "$OUTPUT_DIR/ramdisk.lz4" ]]; then
+        EVAL "rm -f \"$OUTPUT_DIR/ramdisk.lz4\"" || return 1
     fi
-    EVAL "mkdir -p \"$TMP_DIR/ramdisk_build\"" || return 1
+
+    if [[ -d "$RAMDISK_BUILD_DIR" ]]; then
+        EVAL "rm -rf \"$RAMDISK_BUILD_DIR\"" || return 1
+    fi
+    EVAL "mkdir -p \"$RAMDISK_BUILD_DIR\"" || return 1
 
     if [[ ! -d "$OUTPUT_DIR" ]]; then
         EVAL "mkdir -p \"$OUTPUT_DIR\""
     fi
 
     for i in "${DIRS[@]}"; do
-        EVAL "mkdir -p \"$TMP_DIR/ramdisk_build/$i\"" || return 1
+        EVAL "mkdir -p \"$RAMDISK_BUILD_DIR/$i\"" || return 1
     done
 
-    local INIT
-    if [[ -n "$BOARD_DIR" ]]; then
-        INIT="$BOARD_DIR"
-    else
-        INIT="$TARGET_DIR"
-    fi
-    INIT+="/prebuilts/ramdisk/init"
+    for i in "$BOARD_DIR" "$TARGET_DIR"; do
+        if [[ -z "$i" ]]; then
+            continue
+        fi
 
-    if [[ ! -f "$INIT" ]]; then
-        LOGE "init was not found"
-        exit 1
-    fi
+        if [[ ! -d "$i/prebuilts/ramdisk" ]]; then
+            continue
+        fi
 
-    LOG "- Copying ${INIT//$SRC_DIR\//} to ramdisk_build/init"
-    EVAL "cp -a \"$INIT\" \"$TMP_DIR/ramdisk_build/init\"" || return 1
+        while IFS= read -r f; do
+            if [[ ! -d "$RAMDISK_BUILD_DIR/${f//$i\/}" ]]; then
+                EVAL "mkdir -p \"$RAMDISK_BUILD_DIR/${f//$i\/}\"" || return 1
+            fi
+
+            LOG "- Copying ${f//$SRC_DIR\//} to ${RAMDISK_BUILD_DIR//$SRC_DIR\//}/$(basename "$f")"
+            EVAL "cp -a \"$f\" \"$RAMDISK_BUILD_DIR/$(basename "$f")\"" || return 1
+        done < <(find "$i/prebuilts/ramdisk" -mindepth 1)
+    done
 
     LOG "- Creating ramdisk binary"
-    EVAL "mkbootfs \"$TMP_DIR/ramdisk_build\" | lz4 -9cl > \"$OUTPUT_DIR/ramdisk.lz4\"" || return 1
+    EVAL "mkbootfs \"$RAMDISK_BUILD_DIR\" | lz4 -9cl > \"$OUTPUT_DIR/ramdisk.lz4\"" || return 1
 
-    EVAL "rm -rf \"$TMP_DIR/ramdisk_build\""
+    EVAL "rm -rf \"$RAMDISK_BUILD_DIR\"" || return 1
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/internal/build_flashable_zip.sh#L486-L511
