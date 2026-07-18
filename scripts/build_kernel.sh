@@ -88,7 +88,8 @@ if $REGENERATE; then
 fi
 
 if [[ -n "$TARGET_KERNEL_DEFCONFIG_FRAGMENTS" ]]; then
-    for i in $TARGET_KERNEL_DEFCONFIG_FRAGMENTS; do
+    IFS=: read -r -a TARGET_KERNEL_DEFCONFIG_FRAGMENTS <<< "$TARGET_KERNEL_DEFCONFIG_FRAGMENTS"
+    for i in "${TARGET_KERNEL_DEFCONFIG_FRAGMENTS[@]}"; do
         BUILD_KERNEL "$i" -m || exit 1
     done
 fi

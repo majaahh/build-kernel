@@ -46,12 +46,12 @@ MISSING=()
 
 if [[ -z "$TARGET" ]]; then
     echo "Usage: parse_config.sh <codename>" >&2
-    exit 1
+    return 1
 fi
 
 if [[ ! -f "$TARGET_CONFIG" ]]; then
     LOGE "Configuration for $TARGET was not found"
-    exit 1
+    return 1
 fi
 
 # shellcheck disable=SC1090
@@ -90,21 +90,21 @@ if [[ "${#MISSING[@]}" -ne 0 ]]; then
     printf '%s ' "${MISSING[@]}" >&2
     echo -e '\033[0m' >&2
     unset MISSING
-    exit 1
+    return 1
 fi
 
 if [[ "$TARGET_KERNEL_SOURCE" == *"://"* ]] || [[ "$TARGET_KERNEL_SOURCE" == "git@"* ]]; then
     TARGET_KERNEL_URL="$TARGET_KERNEL_SOURCE"
     if [[ "$TARGET_KERNEL_SOURCE" == "git@"* ]]; then
-        _KS_REPO="${TARGET_KERNEL_SOURCE#git@}"
-        _KS_REPO="${_KS_REPO#*:}"
+        REPO="${TARGET_KERNEL_SOURCE#git@}"
+        REPO="${REPO#*:}"
     else
-        _KS_REPO="${TARGET_KERNEL_SOURCE#*://}"
-        _KS_REPO="${_KS_REPO#*/}"
+        REPO="${TARGET_KERNEL_SOURCE#*://}"
+        REPO="${REPO#*/}"
     fi
-    _KS_REPO="${_KS_REPO%.git}"
-    _KS_REPO="${_KS_REPO%/}"
-    TARGET_KERNEL_REPO="$_KS_REPO"
+    REPO="${REPO%.git}"
+    REPO="${REPO%/}"
+    TARGET_KERNEL_REPO="$REPO"
 else
     TARGET_KERNEL_REPO="$TARGET_KERNEL_SOURCE"
     TARGET_KERNEL_URL="https://github.com/$TARGET_KERNEL_SOURCE.git"
@@ -112,4 +112,24 @@ fi
 export TARGET_KERNEL_REPO
 export TARGET_KERNEL_URL
 
-unset TARGET TARGET_CONFIG REQUIRED_CONFIGS _KS_REPO
+if [[ -n "$ZSH_VERSION" ]]; then
+    eval 'for i in ${(k)parameters}; do
+        [[ "$i" == TARGET_* ]] || continue
+        [[ "${(t)${(P)i}}" == *array* ]] || continue
+        VAL=("${(@P)i}")
+        unset "$i"
+        export "$i=${(j/:/)VAL}"
+        unset VAL
+    done'
+else
+    while IFS= read -r i; do
+        [[ "$i" == TARGET_* ]] || continue
+        # shellcheck disable=SC1087
+        VAL="$(IFS=:; eval "echo \"\${$i[*]}\"")"
+        unset "$i"
+        export "$i=$VAL"
+        unset VAL
+    done < <(compgen -A arrayvar)
+fi
+
+unset TARGET TARGET_CONFIG REQUIRED_CONFIGS REPO
