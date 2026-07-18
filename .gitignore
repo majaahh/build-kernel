@@ -3,9 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+# Directories
 out/
 temp/
 tmp/
 
+# Files
 *.img
+*.lz4
 *.tar
+dtb
+kernel
+last_kmsg
+ramdisk
+vendor_ramdisk
