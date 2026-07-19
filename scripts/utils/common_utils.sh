@@ -33,7 +33,7 @@ _CHECK_NON_EMPTY_PARAM()
 BUILD_KERNEL()
 {
     local CMD
-    local PATH="$PATH"
+    local OLD_PATH="$PATH"
 
     # TODO
     if [[ "$TARGET_TOOLCHAIN" == "gcc" ]]; then
@@ -42,11 +42,18 @@ BUILD_KERNEL()
     fi
 
     if [[ "$TARGET_TOOLCHAIN" == "clang"* ]]; then
-        PATH="$PATH:$CLANG_DIR/bin"
+        if [[ "$PATH" != *":$CLANG_DIR/bin:"* ]]; then
+            PATH="$CLANG_DIR/bin:$PATH"
+        fi
     fi
 
     if [[ "$TARGET_TOOLCHAIN" == *"gcc" ]]; then
-        PATH="$PATH:$GCC_DIR_32/bin:$GCC_DIR_64/bin"
+        if [[ "$PATH" != *":$GCC_DIR_32/bin:"* ]]; then
+            PATH="$GCC_DIR_32/bin:$PATH"
+        fi
+        if [[ "$PATH" != *":$GCC_DIR_64/bin:"* ]]; then
+            PATH="$GCC_DIR_64/bin:$PATH"
+        fi
     fi
 
     CMD+="make "
@@ -90,7 +97,12 @@ BUILD_KERNEL()
         fi
     fi
 
-    EVAL "$CMD" || return 1
+    EVAL "$CMD"
+    OUTPUT=$?
+
+    PATH="$OLD_PATH"
+
+    return $OUTPUT
 }
 
 COMPARE_KERNEL_VERSION()
