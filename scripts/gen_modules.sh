@@ -133,9 +133,9 @@ done < <(find "$MODULES_GEN_DIR/lib/modules/0.0" -type f -name "modules.*")
 if [[ -d "$MODULES_OUT" ]]; then
     EVAL "rm -rf \"$MODULES_OUT\"" || exit 1
 fi
-EVAL "mkdir -p \"$MODULES_OUT\"" || exit 1
+EVAL "mkdir -p \"$MODULES_OUT/lib/modules\"" || exit 1
 
-EVAL "mv \"$MODULES_GEN_DIR/lib/modules/0.0/\"* \"$MODULES_OUT/\"" || exit 1
-EVAL "mv \"$MODULES_LOAD\" \"$MODULES_OUT/modules.load\"" || exit 1
+EVAL "mv \"$MODULES_GEN_DIR/lib/modules/0.0/\"* \"$MODULES_OUT/lib/modules\"" || exit 1
+EVAL "mv \"$MODULES_LOAD\" \"$MODULES_OUT/lib/modules/modules.load\"" || exit 1
 
 EVAL "rm -rf \"$TMP_DIR\"" || exit 1

@@ -87,12 +87,22 @@ BUILD_BOOT_IMAGE()
     fi
 
     if [[ "$IMAGE" == "vendor_boot" ]]; then
+        if [[ -d "$OUT/modules/$TARGET_CODENAME" ]]; then
+            EVAL "mkdir -p \"$OUT/modules/$TARGET_CODENAME\""
+        fi
+
         LOG_STEP_IN "- Generating modules"
         "$SRC_DIR/scripts/gen_modules.sh" "$OUT/modules/$TARGET_CODENAME" || return 1
         LOG_STEP_OUT
 
-        if [[ ! -f "$TMP_DIR/dtb.img" ]]; then
-            BUILD_DT_IMAGE "dtb" "$TMP_DIR" || return 1
+        if [[ -f "$TMP_DIR/dtb.img" ]]; then
+            EVAL "rm -f \"$TMP_DIR/dtb.img\"" || return 1
+        fi
+
+        BUILD_DT_IMAGE "dtb" "$TMP_DIR" || return 1
+
+        if [[ ! -d "$TMP_DIR" ]]; then
+            EVAL "mkdir -p \"$TMP_DIR\"" || return 1
         fi
 
         EVAL "mkbootfs \"$OUT/modules/$TARGET_CODENAME\" | lz4 -9cl > \"$TMP_DIR/ramdisk_dlkm.lz4\"" || return 1
@@ -132,8 +142,8 @@ BUILD_BOOT_IMAGE()
             fi
 
             while IFS= read -r f; do
-                if [[ ! -d "$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}" ]]; then
-                    EVAL "mkdir -p \"$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}\"" || return 1
+                if [[ ! -d "$(dirname "$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}")" ]]; then
+                    EVAL "mkdir -p \"$(dirname "$RAMDISK_PLATFORM_BUILD_DIR/vendor/firmware/${f//$i\/prebuilts\/firmware\/}")\"" || return 1
                 fi
 
                 LOG "- Copying ${f//$SRC_DIR\//} to ${RAMDISK_PLATFORM_BUILD_DIR//$SRC_DIR\//}/vendor/firmware/$(basename "$f")"
@@ -273,8 +283,8 @@ BUILD_RAMDISK_BINARY()
         fi
 
         while IFS= read -r f; do
-            if [[ ! -d "$RAMDISK_BUILD_DIR/${f//$i\/}" ]]; then
-                EVAL "mkdir -p \"$RAMDISK_BUILD_DIR/${f//$i\/}\"" || return 1
+            if [[ ! -d "$(dirname "$RAMDISK_BUILD_DIR/${f//$i\/prebuilts\/ramdisk\/}")" ]]; then
+                EVAL "mkdir -p \"$(dirname "$RAMDISK_BUILD_DIR/${f//$i\/prebuilts\/ramdisk\/}")\"" || return 1
             fi
 
             LOG "- Copying ${f//$SRC_DIR\//} to ${RAMDISK_BUILD_DIR//$SRC_DIR\//}/$(basename "$f")"
