@@ -1,49 +1,16 @@
 #
-# SPDX-FileCopyrightText: Majaahh
+# SPDX-FileCopyrightText: The LineageOS Project
 # SPDX-License-Identifier: Apache-2.0
 #
-
-# Super
-system       /system      erofs ro wait,logical,first_stage_mount
-vendor       /vendor      erofs ro wait,logical,first_stage_mount
-vendor_dlkm  /vendor_dlkm erofs ro wait,logical,first_stage_mount
-product      /product     erofs ro wait,logical,first_stage_mount
-odm          /odm         erofs ro wait,logical,first_stage_mount
-
-# Kernel
-/dev/block/by-name/boot         /boot         emmc    defaults    first_stage_mount,formattable
-/dev/block/by-name/vendor_boot  /vendor_boot  emmc    defaults    first_stage_mount,formattable
-/dev/block/by-name/dtbo         /dtbo         emmc    defaults    first_stage_mount,formattable
-
-# Metadata
-/dev/block/by-name/metadata  /metadata ext4  noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic,sync	wait,formattable,first_stage_mount,check
-
-# Efs
-/dev/block/by-name/efs /mnt/vendor/efs      ext4  noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic	wait,check
-/dev/block/by-name/cpefs /mnt/vendor/cpefs	ext4  noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic	wait,check,nofail
-
-# Misc
-/dev/block/by-name/misc /misc   emmc   defaults   defaults,first_stage_mount
-
-# Recovery
-/dev/block/by-name/recovery	/recovery	  emmc  defaults  first_stage_mount
-
-# Cache
-/dev/block/by-name/cache /cache  f2fs   noatime,nosuid,nodev,discard,errors=panic wait,check
-
-# keystorage
-/dev/block/by-name/keystorage	/keystorage  emmc   defaults   first_stage_mount
-
-# Harx
-/dev/block/by-name/harx   /harx   emmc   defaults   first_stage_mount
-
-# CSC
-/dev/block/by-name/prism   /prism  ext4 ro,barrier=1 nofail,first_stage_mount
-/dev/block/by-name/optics  /optics ext4 ro,barrier=1 nofail,first_stage_mount
-
-# Userdata
-/dev/block/by-name/userdata /data f2fs noatime,nosuid,nodev,discard,usrquota,grpquota,fsync_mode=nobarrier,reserve_root=32768,resgid=5678,whint_mode=fs-based,inlinecrypt	latemount,wait,check,quota,reservedsize=128M,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized+wrappedkey_v0,metadata_encryption=aes-256-xts:wrappedkey_v0,checkpoint=fs,fscompress,keydirectory=/metadata/vold/metadata_encryption
-
-# USB
-/devices/platform/13200000.usb*	            auto vfat	default	voldmanaged=usb:auto
-/devices/platform/100e0000.dwmmc2/mmc_host*	auto auto	default	voldmanaged=sdcard:auto
+#<src>                            <mnt_point>        <type> <mnt_flags and options>                                                                                         <fs_mgr_flags>
+system                            /system            ext4   ro                                                                                                              logical,first_stage_mount
+system_ext                        /system_ext        ext4   ro                                                                                                              logical,first_stage_mount
+product                           /product           ext4   ro                                                                                                              logical,first_stage_mount
+vendor                            /vendor            erofs  ro                                                                                                              logical,first_stage_mount
+vendor_dlkm                       /vendor_dlkm       erofs  ro                                                                                                              logical,first_stage_mount
+/dev/block/by-name/vbmeta         /vbmeta            emmc   defaults                                                                                                        first_stage_mount
+/dev/block/by-name/keystorage     /keystorage        emmc   defaults                                                                                                        first_stage_mount
+/dev/block/by-name/harx           /harx              emmc   defaults                                                                                                        first_stage_mount
+/dev/block/by-name/efs            /mnt/vendor/efs    ext4   noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic                         first_stage_mount,wait,formattable,check
+/dev/block/by-name/cpefs          /mnt/vendor/cpefs  ext4   noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic                         first_stage_mount,wait,check,nofail
+/dev/block/by-name/metadata       /metadata          ext4   noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic,sync                    first_stage_mount,check
