@@ -56,6 +56,15 @@ if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
+if [[ ! -d "$GCC_DIR_32" ]]; then
+    LOG "- Cloning 32-bit AOSP GCC"
+    EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git\" \"$GCC_DIR_32\"" || exit 1
+fi
+if [[ ! -d "$GCC_DIR_64" ]]; then
+    LOG "- Cloning 64-bit AOSP GCC"
+    EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git\" \"$GCC_DIR_64\"" || exit 1
+fi
+
 if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN "- Setting up kernel source"
 

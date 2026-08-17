@@ -33,6 +33,14 @@ _CHECK_NON_EMPTY_PARAM()
 BUILD_KERNEL()
 {
     local CMD
+    local OLD_PATH="$PATH"
+
+    if [[ "$PATH" != *":$GCC_DIR_32/bin:"* ]]; then
+        PATH="$GCC_DIR_32/bin:$PATH"
+    fi
+    if [[ "$PATH" != *":$GCC_DIR_64/bin:"* ]]; then
+        PATH="$GCC_DIR_64/bin:$PATH"
+    fi
 
     CMD+="make "
     CMD+="-C \"$KERNEL_DIR\" "
@@ -44,12 +52,19 @@ BUILD_KERNEL()
     CMD+="LLVM=1 "
     CMD+="LLVM_IAS=1 "
     CMD+="O=\"$BUILD_DIR\" "
+    CMD+="CLANG_TRIPLE=\"aarch64-linux-gnu-\" "
+    CMD+="CROSS_COMPILE=\"aarch64-linux-android-\" "
+    CMD+="CROSS_COMPILE_ARM32=\"arm-linux-androidkernel-\" "
+    CMD+="CROSS_COMPILE_COMPAT=\"arm-linux-androidkernel-\" "
     if [[ -n "$1" ]]; then
         CMD+="$1 "
     fi
     CMD+="> /dev/null"
 
-    EVAL "$CMD" || return 1
+    EVAL "$CMD"
+    OUTPUT=$?
+    PATH="$OLD_PATH"
+    return $OUTPUT
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/module_utils.sh#L79
