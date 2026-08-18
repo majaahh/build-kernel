@@ -35,27 +35,24 @@ BUILD_KERNEL()
     local CMD
     local OLD_PATH="$PATH"
 
-    if [[ "$PATH" != *":$GCC_DIR_32/bin:"* ]]; then
-        PATH="$GCC_DIR_32/bin:$PATH"
-    fi
-    if [[ "$PATH" != *":$GCC_DIR_64/bin:"* ]]; then
-        PATH="$GCC_DIR_64/bin:$PATH"
-    fi
-
+    CMD+="PATH=\"$KERNEL_DIR/toolchain/clang/host/linux-x86/clang-r416183b/bin:$PATH\" "
+    CMD+="PATH=\"$KERNEL_DIR/toolchain/prebuilts/gas/linux-x86:$PATH\" "
+    CMD+="PATH=\"/home/Maja/android/lineage-23.2/prebuilts/build-tools/path/linux-x86:$PATH\" "
+    CMD+="PLATFORM_VERSION=12 "
+    CMD+="TARGET_SOC=s5e8825 "
+    CMD+="ANDROID_MAJOR_VERSION=s "
     CMD+="make "
     CMD+="-C \"$KERNEL_DIR\" "
     CMD+="-j\"$(nproc --all)\" "
     CMD+="ARCH=\"arm64\" "
-    CMD+="CC=\"clang\" "
+    CMD+="CC=\"$KERNEL_DIR/toolchain/clang/host/linux-x86/clang-r416183b/bin/clang\" "
+    CMD+="CROSS_COMPILE=\"$KERNEL_DIR/toolchain/clang/host/linux-x86/clang-r416183b/bin/aarch64-linux-gnu-\" "
+    CMD+="CLANG_TRIPLE=\"$KERNEL_DIR/toolchain/clang/host/linux-x86/clang-r416183b/bin/aarch64-linux-gnu-\" "
     CMD+="KBUILD_BUILD_USER=\"Majaahh\" "
     CMD+="KBUILD_BUILD_HOST=\"PC\" "
     CMD+="LLVM=1 "
     CMD+="LLVM_IAS=1 "
     CMD+="O=\"$BUILD_DIR\" "
-    CMD+="CLANG_TRIPLE=\"aarch64-linux-gnu-\" "
-    CMD+="CROSS_COMPILE=\"aarch64-linux-android-\" "
-    CMD+="CROSS_COMPILE_ARM32=\"arm-linux-androidkernel-\" "
-    CMD+="CROSS_COMPILE_COMPAT=\"arm-linux-androidkernel-\" "
     if [[ -n "$1" ]]; then
         CMD+="$1 "
     fi

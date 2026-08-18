@@ -56,15 +56,6 @@ if ! $REGENERATE && [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$GCC_DIR_32" ]]; then
-    LOG "- Cloning 32-bit AOSP GCC"
-    EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git\" \"$GCC_DIR_32\"" || exit 1
-fi
-if [[ ! -d "$GCC_DIR_64" ]]; then
-    LOG "- Cloning 64-bit AOSP GCC"
-    EVAL "git clone --depth=1 -j\"$(nproc --all)\" \"https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git\" \"$GCC_DIR_64\"" || exit 1
-fi
-
 if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_IN "- Setting up kernel source"
 
@@ -81,11 +72,6 @@ if [[ ! -d "$KERNEL_DIR" ]]; then
     LOG_STEP_OUT
 fi
 
-if ! $REGENERATE && [[ ! -f "$KERNEL_DIR/arch/arm64/configs/$DEVICE.config" ]]; then
-    LOGE "Configuration fragment for $DEVICE was not found"
-    exit 1
-fi
-
 if [[ ! -d "$TOOLCHAIN_DIR" ]]; then
     # shellcheck disable=SC2119
     GET_AOSP_CLANG || exit 1
@@ -94,17 +80,17 @@ else
 fi
 
 LOG_STEP_IN "- Generating configuration"
-BUILD_KERNEL "s5e8825_defconfig"
+BUILD_KERNEL "s5e8825-a26xsub_defconfig"
 
 if $REGENERATE; then
-    LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
-    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\""
+    LOG "- Copying configuration to arch/arm64/configs/s5e8825-a26xsub_defconfig"
+    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825-a26xsub_defconfig\""
     LOG_STEP_OUT
     exit 0
 fi
 
-LOG "- Merging $DEVICE fragment"
-BUILD_KERNEL "$DEVICE.config"
+#LOG "- Merging $DEVICE fragment"
+#BUILD_KERNEL "$DEVICE.config"
 
 if $KSU; then
     LOG "- Merging KernelSU fragment"
