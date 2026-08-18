@@ -102,7 +102,5 @@ if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOC
     EVAL "sed -i s/\-UN1CA/\-UN1CA\-$(git -C "$KERNEL_DIR" rev-parse --short HEAD)/g \"$BUILD_DIR/.config\""
 fi
 LOG_STEP_OUT
-LOG "- Building dtbs"
-BUILD_KERNEL "dtbs"
 LOG "- Building kernel image"
 BUILD_KERNEL
