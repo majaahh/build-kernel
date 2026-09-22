@@ -18,9 +18,9 @@ export GCC_DIR_32="$OUT/gcc_32"
 export GCC_DIR_64="$OUT/gcc_64"
 export TOOLS_DIR="$SRC_DIR/prebuilts/tools"
 export TMP_DIR="$OUT/tmp"
-if [[ ":$PATH:" != *":$TOOLCHAIN_DIR/bin:"* ]]; then
-    export PATH="$TOOLCHAIN_DIR/bin:$PATH"
-fi
+#if [[ ":$PATH:" != *":$TOOLCHAIN_DIR/bin:"* ]]; then
+#    export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+#fi
 if [[ ":$PATH:" != *":$TOOLS_DIR:"* ]]; then
     export PATH="$TOOLS_DIR:$PATH"
 fi

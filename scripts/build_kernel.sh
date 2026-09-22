@@ -79,8 +79,35 @@ else
     GET_LATEST_AOSP_CLANG --compare
 fi
 
+TC="$KERNEL_DIR/toolchain/clang/host/linux-x86/clang-r416183b/bin"
+GAS="$KERNEL_DIR/toolchain/prebuilts/gas/linux-x86"
+BT="/home/Maja/android/lineage-23.2/prebuilts/build-tools/path/linux-x86"
+
+if [[ ":$PATH:" != *":$TC:"* ]]; then
+    export PATH="$TC:$PATH"
+fi
+if [[ ":$PATH:" != *":$GAS:"* ]]; then
+    export PATH="$GAS:$PATH"
+fi
+if [[ ":$PATH:" != *":$BT:"* ]]; then
+    export PATH="$BT:$PATH"
+fi
+
+export PLATFORM_VERSION=12
+export TARGET_SOC=s5e8825
+export ANDROID_MAJOR_VERSION=s
+
+export ARCH="arm64"
+export CC="$TC/clang"
+export CROSS_COMPILE="$TC/aarch64-linux-gnu-"
+export CLANG_TRIPLE="$TC/aarch64-linux-gnu-"
+export LLVM=1
+export LLVM_IAS=1
+export KBUILD_BUILD_USER=Majaahh
+export KBUILD_BUILD_HOST=PC
+
 LOG_STEP_IN "- Generating configuration"
-BUILD_KERNEL "s5e8825_defconfig"
+make -C "$KERNEL_DIR" -j28 O="$BUILD_DIR" s5e8825_defconfig
 
 if $REGENERATE; then
     LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
@@ -90,7 +117,7 @@ if $REGENERATE; then
 fi
 
 LOG "- Merging $DEVICE fragment"
-BUILD_KERNEL "$DEVICE.config"
+make -C "$KERNEL_DIR" -j28 O="$BUILD_DIR" a53x.config
 
 if $KSU; then
     LOG "- Merging KernelSU fragment"
@@ -103,4 +130,4 @@ if [[ "$("$KERNEL_DIR/scripts/config" -s --file "$BUILD_DIR/.config" "CONFIG_LOC
 fi
 LOG_STEP_OUT
 LOG "- Building kernel image"
-BUILD_KERNEL
+make -C "$KERNEL_DIR" -j28 O="$BUILD_DIR"
