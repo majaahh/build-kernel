@@ -80,17 +80,17 @@ else
 fi
 
 LOG_STEP_IN "- Generating configuration"
-BUILD_KERNEL "s5e8825-a26xsub_defconfig"
+BUILD_KERNEL "s5e8825_defconfig"
 
 if $REGENERATE; then
-    LOG "- Copying configuration to arch/arm64/configs/s5e8825-a26xsub_defconfig"
-    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825-a26xsub_defconfig\""
+    LOG "- Copying configuration to arch/arm64/configs/s5e8825_defconfig"
+    EVAL "cp -a \"$BUILD_DIR/.config\" \"$KERNEL_DIR/arch/arm64/configs/s5e8825_defconfig\""
     LOG_STEP_OUT
     exit 0
 fi
 
-#LOG "- Merging $DEVICE fragment"
-#BUILD_KERNEL "$DEVICE.config"
+LOG "- Merging $DEVICE fragment"
+BUILD_KERNEL "$DEVICE.config"
 
 if $KSU; then
     LOG "- Merging KernelSU fragment"
