@@ -64,8 +64,8 @@ DOWNLOAD_FILE()
     local OUTPUT="$2"
 
     EVAL "mkdir -p \"$(dirname "$OUTPUT")\""
-    EVAL "curl -L -o \"$OUTPUT\" \"$URL\""
-    return $?
+    EVAL "curl -L -o \"$OUTPUT\" \"$URL\"" || return 1
+    return 0
 }
 
 # https://github.com/salvogiangri/UN1CA/blob/3.0.0/scripts/utils/common_utils.sh#L485
@@ -113,7 +113,12 @@ GET_AOSP_CLANG()
     LATEST_AOSP_CLANG="$(GET_LATEST_AOSP_CLANG)"
     CLANG_URL="$AOSP_ARCHIVE/$LATEST_AOSP_CLANG.tar.gz"
 
-    if [[ -d "$TMP_DIR" ]]; then
+    if [[ -z "$LATEST_AOSP_CLANG" ]]; then
+        LOGE "Failed to fetch AOSP clang version"
+        return 1
+    fi
+
+    if [[ ! -d "$TMP_DIR" ]]; then
         EVAL "mkdir -p \"$TMP_DIR\""
     fi
 
